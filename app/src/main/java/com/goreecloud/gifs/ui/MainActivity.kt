@@ -1,6 +1,8 @@
 package com.goreecloud.gifs.ui
 
 import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -39,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import coil3.compose.AsyncImage
+import com.goreecloud.gifs.data.MediaAttribution
 import com.goreecloud.gifs.data.MediaItem
 import com.goreecloud.gifs.data.MediaKind
 import com.goreecloud.gifs.data.PickerPolicy
@@ -145,6 +148,7 @@ private fun GalleryScreen(
     val kind = MediaKind.valueOf(type)
     val uiScope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
+    val context = LocalContext.current
 
     LaunchedEffect(query, type, tab) {
         if (tab == 0) {
@@ -175,6 +179,17 @@ private fun GalleryScreen(
                 snackbar.showSnackbar(e.message ?: "Could not update favorites.")
             } finally { busyId = null }
         }
+    }
+    fun copyAttribution(item: MediaItem) {
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        if (clipboard == null) {
+            uiScope.launch { snackbar.showSnackbar("Clipboard unavailable") }
+            return
+        }
+        clipboard.setPrimaryClip(ClipData.newPlainText(
+            "Media attribution", MediaAttribution.text(item)
+        ))
+        uiScope.launch { snackbar.showSnackbar("Creator, license and source copied") }
     }
     fun download(item: MediaItem) {
         if (busyId != null) return
@@ -383,7 +398,8 @@ private fun GalleryScreen(
                 onShare = { (onPick ?: onShare)(item) },
                 onDownload = { download(item) },
                 isPicker = onPick != null,
-                onSource = { onSource(item.sourceUrl) }
+                onSource = { onSource(item.sourceUrl) },
+                onCopyAttribution = { copyAttribution(item) }
             )
         }
     }
@@ -463,7 +479,8 @@ private fun MediaDetail(
     onShare: () -> Unit,
     onDownload: () -> Unit,
     isPicker: Boolean,
-    onSource: () -> Unit
+    onSource: () -> Unit,
+    onCopyAttribution: () -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).navigationBarsPadding()
@@ -501,6 +518,10 @@ private fun MediaDetail(
                 null, Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Text(if (isFavorite) "Remove from favorites" else "Save offline favorite")
+        }
+        TextButton(onClick = onCopyAttribution) {
+            Icon(Icons.Default.ContentCopy, null, Modifier.size(16.dp))
+            Spacer(Modifier.width(6.dp)); Text("Copy creator and license credit")
         }
         TextButton(onClick = onSource) {
             Icon(Icons.AutoMirrored.Filled.OpenInNew, null, Modifier.size(16.dp))

@@ -10,7 +10,7 @@
 ## Next development priorities (not implemented)
 1. Verify successful CI, emulator and physical-device behavior, share targets and downloaded file integrity.
 2. Improve network retry/backoff, thumbnail disk-cache limits and search relevance; pagination is implemented in development source.
-3. Build a first-party image detail attribution/copy-credit action; improve content rights guidance.
+3. Verify clipboard attribution behavior on supported devices; improve content rights guidance and media-specific license notices.
 4. Add sticker packs, own imported media, categories, collections, search filters and local export/import.
 5. Audit inclusive design, screen reader controls, RTL, tablet layouts and automated image UI tests.
 6. Add optional self-hosted source adapters behind user consent and explicit endpoint trust.
