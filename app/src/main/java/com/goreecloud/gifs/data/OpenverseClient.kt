@@ -2,40 +2,91 @@ package com.goreecloud.gifs.data
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.json.JSONObject
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
+data class GifSearchPage(
+    val items: List<MediaItem>,
+    val page: Int,
+    val hasMore: Boolean
+)
+
+/**
+ * No API key required. Openverse's anonymous endpoint permits at most 20
+ * records per page (larger values return HTTP 401).
+ */
 class OpenverseClient(private val client: OkHttpClient) {
-    suspend fun searchGifs(query: String): List<MediaItem> = withContext(Dispatchers.IO) {
-        val q = query.trim().take(100)
-        if (q.isEmpty()) return@withContext emptyList()
-        val url = "https://api.openverse.org/v1/images/".toHttpUrl()
-            .newBuilder()
-            .addQueryParameter("q", q)
-            .addQueryParameter("extension", "gif")
-            .addQueryParameter("mature", "false")
-            .addQueryParameter("page_size", "40")
-            .build()
+    suspend fun searchGifs(query: String, page: Int = 1): GifSearchPage = withContext(Dispatchers.IO) {
+        val q = query.trim().take(MAX_QUERY_CHARS)
+        if (q.isEmpty()) return@withContext GifSearchPage(emptyList(), 1, false)
+
+        val requestedPage = page.coerceIn(1, MAX_PAGES)
         val request = Request.Builder()
-            .url(url)
+            .url(buildSearchUrl(q, requestedPage))
             .header("Accept", "application/json")
             .header("User-Agent", "GoreeCloud-GIFs/0.1 (+https://github.com/GoreeCloud/GIF)")
             .build()
         val body = client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
-                if (response.code == 429) throw IOException("Openverse rate limit reached. Try again later.")
-                throw IOException("GIF search unavailable (HTTP " + response.code + ").")
+                when (response.code) {
+                    429 -> throw IOException("Openverse is busy. Please try again shortly.")
+                    401, 403 -> throw IOException("Openverse refused the anonymous request.")
+                    else -> throw IOException("GIF search unavailable (HTTP " + response.code + ").")
+                }
             }
-            response.body?.string() ?: throw IOException("Openverse returned no data.")
+            // Limit the response to bound memory use from the search endpoint.
+            val responseBody = response.body ?: throw IOException("Openverse returned no data.")
+            if (responseBody.contentLength() > MAX_JSON_BYTES) {
+                throw IOException("Openverse response too large.")
+            }
+            responseBody.charStream().use { reader ->
+                val buffer = CharArray(8192)
+                val content = StringBuilder()
+                while (true) {
+                    val read = reader.read(buffer)
+                    if (read == -1) break
+                    if (content.length.toLong() + read > MAX_JSON_BYTES) {
+                        throw IOException("Openverse response too large.")
+                    }
+                    content.append(buffer, 0, read)
+                }
+                content.toString()
+            }
         }
-        parseResults(body)
+        parsePage(body, requestedPage)
     }
 
     companion object {
+        const val PAGE_SIZE = 20
+        const val MAX_PAGES = 100
+        const val MAX_QUERY_CHARS = 100
+        private const val MAX_JSON_BYTES = 2_000_000L
+
+        fun buildSearchUrl(query: String, page: Int = 1): HttpUrl =
+            "https://api.openverse.org/v1/images/".toHttpUrl().newBuilder()
+                .addQueryParameter("q", query.trim().take(MAX_QUERY_CHARS))
+                .addQueryParameter("extension", "gif")
+                .addQueryParameter("mature", "false")
+                .addQueryParameter("page_size", PAGE_SIZE.toString())
+                .addQueryParameter("page", page.coerceIn(1, MAX_PAGES).toString())
+                .build()
+
+        fun parsePage(body: String, page: Int): GifSearchPage {
+            val root = JSONObject(body)
+            val requestedPage = page.coerceIn(1, MAX_PAGES)
+            val total = root.optInt("page_count", requestedPage).coerceAtLeast(0)
+            return GifSearchPage(
+                items = parseResults(body),
+                page = requestedPage,
+                hasMore = requestedPage < minOf(total, MAX_PAGES)
+            )
+        }
+
         fun parseResults(body: String): List<MediaItem> {
             val results = JSONObject(body).optJSONArray("results") ?: return emptyList()
             val items = ArrayList<MediaItem>()
