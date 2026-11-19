@@ -24,7 +24,7 @@
             </intent-filter>
         </activity>
         <provider
-            android:name="androidx.core.content.FileProvider"
+            android:name=".GoreeCloudFileProvider"
             android:authorities="com.goreecloud.gifs.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
