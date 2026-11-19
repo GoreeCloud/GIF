@@ -9,6 +9,7 @@
 | Share to other apps | Implemented with FileProvider and ACTION_SEND | Target apps and URI grant tests |
 | Download to phone | Implemented with Android MediaStore scoped storage | Android 10–current integration tests |
 | Attribution/source | Implemented in detail sheet | Format/readability review |
+| Public DNS and HTTPS media hardening | Implemented in source with address validation, redirect separation and local unit tests | Real-network, DNS64 and device regression testing |
 | Native appearance | Jetpack Compose, approved GC UI alpha colors | Visual and accessibility audit |
 | GIF trending / personalized recommendations | Not implemented | Product/relevance planning |
 | Sticker pack installation into third-party keyboards | Not implemented | App-specific APIs / permissions |

@@ -8,7 +8,7 @@
 
 **Storage:** DataStore preferences holds small favorite metadata; app-private files/favorites contains original image bytes. The share cache uses cache/shares; content shares via a non-exported AndroidX FileProvider, with temporary URI read grants only. Download uses MediaStore pending media insertion in Pictures/GoreeCloud GIFs. No broad file storage permission is requested.
 
-**Controls:** no HTTP cleartext, external link checks, no cross-origin redirects for media acquisition, bounded 25 MiB downloads, magic byte checks (GIF/PNG), temporary files with atomic rename, no executable extensions, no analytics and no background network scanning.
+**Controls:** no HTTP cleartext, external URL validation plus a public-address-only DNS resolver, no redirects for explicit GIF/PNG acquisition, HTTPS-only redirects for Coil previews to public hosts, bounded 25 MiB downloads, magic byte checks (GIF/PNG), temporary files with atomic rename, no executable extensions, no analytics and no background network scanning.
 
 **MIPS:** GC UI token values manually mapped from gc-ui (alpha Iris); GoreeShield maps to local-first data/explicit external fetches; Wardveil maps to input/media/transport restrictions; Mesh and Identity have no runtime dependencies. Full platform integrations and release-level verification are not yet complete.
 
