@@ -9,7 +9,7 @@
 | Share to other apps | Implemented with FileProvider and ACTION_SEND | Target apps and URI grant tests |
 | Pick GIF/PNG from requesting apps | Single-item Android ACTION_GET_CONTENT activity integration with MIME validation and temporary read grant | Caller integration/device tests |
 | Download to phone | Implemented with Android MediaStore scoped storage | Android 10–current integration tests |
-| Attribution/source | Implemented in detail sheet | Format/readability review |
+| Attribution/source and copyable credit | Implemented in detail sheet; formats creator, license and safe source URL for clipboard | Attribution usability and device review |
 | Public DNS and HTTPS media hardening | Implemented in source with address validation, redirect separation and local unit tests | Real-network, DNS64 and device regression testing |
 | Native appearance | Jetpack Compose, approved GC UI alpha colors | Visual and accessibility audit |
 | GIF trending / personalized recommendations | Not implemented | Product/relevance planning |

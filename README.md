@@ -13,6 +13,7 @@ A native, open-source Android gallery for finding, saving, and sharing GIFs and 
 - Android share sheet: share a downloaded GIF (image/gif) or sticker (image/png) into another compatible app using FileProvider and temporary URI read permission.
 - Android image picker interoperability: eligible apps using `ACTION_GET_CONTENT` can select GoreeCloud GIF's as a media source. The user deliberately selects a single compatible GIF/PNG; the app returns a temporary read-only `content://` URI.
 - Phone download: write GIFs and PNGs to Pictures/GoreeCloud GIFs through Android MediaStore.
+- Copy attribution: one tap in the detail sheet copies creator credit, source URL, and license text for appropriate downstream reuse.
 - No account, analytics, tracking, ad SDK, contact permission, or broad storage permission.
 
 ## Install/build from source
@@ -28,7 +29,7 @@ Find the development-signed debug APK at `app/build/outputs/apk/debug/app-debug.
 ## How to use
 
 1. Browse **Explore**. Choose GIFs or Stickers and enter a search query. A blank GIF search shows reactions.
-2. Tap an image for a larger preview, details, attribution and actions.
+2. Tap an image for a larger preview, details, attribution and actions. Use **Copy creator and license credit** to save the source details before forwarding media.
 3. Tap **heart** to save offline, **Share** to send media through Android's chooser, or **Download** to place the file in Pictures/GoreeCloud GIFs.
 4. Open **Saved** to access offline favorites even if search is unavailable.
 5. In apps that invoke Android's compatible `ACTION_GET_CONTENT` image picker, choose **GoreeCloud GIF's**, browse or search, and tap **Use in app**. This does not install a system keyboard or extend every modern photo picker.
