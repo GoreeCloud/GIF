@@ -4,7 +4,7 @@
 - Native Android Jetpack Compose app and local app-only navigation.
 - Openverse GIF search with licensing attribution.
 - Searchable OpenMoji catalog indexed from a pinned, bundled data snapshot.
-- Save favorites offline, share MIME-correct content URIs, export to MediaStore.
+- Save favorites offline, share MIME-correct content URIs, export to MediaStore, and respond to single-image `ACTION_GET_CONTENT` pickers.
 - Initial automated tests, build workflows and security bounds.
 
 ## Next development priorities (not implemented)

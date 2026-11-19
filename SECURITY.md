@@ -6,7 +6,7 @@ This project is a development alpha, not a production-hardened service. Please r
 - No account access, permissions to contacts or files, telemetry SDK, background service or embedded browser.
 - HTTPS-only external media requests, no automatic network redirect following for downloads.
 - Refuse loopback/private/link-local URL targets, non-GIF/PNG payloads and downloads larger than 25 MiB.
-- App-private favorites; explicitly permissioned temporary Android content URI sharing.
+- App-private favorites; explicitly permissioned temporary Android content URI sharing. `ACTION_GET_CONTENT` responses require an explicit item choice, restrict GIF/PNG MIME types and grant only temporary read access to the selected item.
 - Gradle and dependency versions pinned; source review and CI remain ongoing.
 
 ## Open risks
