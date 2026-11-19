@@ -155,6 +155,7 @@ private fun GalleryScreen(
     val uiScope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
 
     LaunchedEffect(exploreQuery, type, tab) {
         if (tab == 0) {
