@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
+import android.provider.OpenableColumns
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -15,11 +16,12 @@ import okhttp3.Request
 import java.io.File
 import java.io.IOException
 import java.security.MessageDigest
+import java.util.UUID
 
 /** Remote downloads are bounded, atomic, checked by magic bytes, and never executed. */
 class MediaFiles(private val context: Context, private val client: OkHttpClient) {
     private val lock = Mutex()
-    private val maxBytes = 25L * 1024L * 1024L
+    private val maxBytes = ImportPolicy.MAX_BYTES
 
     private fun safeName(item: MediaItem) =
         MessageDigest.getInstance("SHA-256")
@@ -72,6 +74,61 @@ class MediaFiles(private val context: Context, private val client: OkHttpClient)
                 temp.delete()
             }
             cached
+        }
+    }
+
+    /**
+     * Explicitly user-selected SAF content; only GIF/PNG bytes are accepted.
+     * Copy once into app-private storage. Never retain document-provider access.
+     */
+    suspend fun importFromUri(uri: Uri): MediaItem = withContext(Dispatchers.IO) {
+        if (uri.scheme != "content" || uri.authority.isNullOrBlank()) {
+            throw IOException("Only an Android document-provider image can be imported.")
+        }
+        val dir = File(context.filesDir, "favorites")
+        if (!dir.isDirectory && !dir.mkdirs()) throw IOException("Cannot create favorites directory.")
+        val temp = File.createTempFile("import-", ".part", dir)
+        try {
+            val input = context.contentResolver.openInputStream(uri)
+                ?: throw IOException("Cannot open the selected image.")
+            input.use { source ->
+                temp.outputStream().buffered().use { target ->
+                    val buffer = ByteArray(8192)
+                    var total = 0L
+                    while (true) {
+                        val read = source.read(buffer)
+                        if (read == -1) break
+                        total += read
+                        if (total > maxBytes) throw IOException("Image exceeds 25 MB limit.")
+                        target.write(buffer, 0, read)
+                    }
+                }
+            }
+            val kind = ImportPolicy.detectKind(temp)
+                ?: throw IOException("Select a valid GIF or PNG image.")
+            val displayName = runCatching {
+                context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME),
+                    null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst() && !cursor.isNull(0)) cursor.getString(0) else null
+                }
+            }.getOrNull()
+            val item = MediaItem(
+                id = "local:" + UUID.randomUUID().toString(),
+                title = ImportPolicy.title(displayName, kind),
+                kind = kind,
+                url = "",
+                thumbnail = "",
+                credit = "Imported from this device",
+                sourceUrl = "",
+                license = "User-supplied media; confirm sharing rights"
+            )
+            val destination = favoriteFile(item)
+            if (destination.exists() || !temp.renameTo(destination)) {
+                throw IOException("Cannot save the imported image.")
+            }
+            item.copy(localFile = destination.name)
+        } finally {
+            temp.delete()
         }
     }
 

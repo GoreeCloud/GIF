@@ -9,6 +9,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -54,6 +55,20 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val vm: GalleryViewModel by viewModels()
+    private val importPicker = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            lifecycleScope.launch {
+                try {
+                    val item = vm.importFromUri(uri)
+                    vm.showMessage("Imported " + item.title + " to Saved")
+                } catch (error: Exception) {
+                    vm.showMessage(error.message ?: "Unable to import this image.")
+                }
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,6 +85,7 @@ class MainActivity : ComponentActivity() {
                     viewModel = vm,
                     onShare = { item -> send(item) },
                     onSource = { url -> openSource(url) },
+                    onImport = { importPicker.launch(arrayOf("image/gif", "image/png")) },
                     onPick = if (requestedMime != null) {
                         { item: MediaItem -> pick(item, requestedMime) }
                     } else null,
@@ -131,6 +147,7 @@ private fun GalleryScreen(
     viewModel: GalleryViewModel,
     onShare: (MediaItem) -> Unit,
     onSource: (String) -> Unit,
+    onImport: () -> Unit,
     onPick: ((MediaItem) -> Unit)?,
     requestedMime: String?
 ) {
@@ -341,6 +358,13 @@ private fun GalleryScreen(
                         style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold
                     )
                     Spacer(Modifier.weight(1f))
+                    if (tab == 1 && onPick == null) {
+                        TextButton(onClick = onImport) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Import")
+                        }
+                    }
                     Text(shown.size.toString() + " items", style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -567,9 +591,11 @@ private fun MediaDetail(
             Icon(Icons.Default.ContentCopy, null, Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp)); Text("Copy creator and license credit")
         }
-        TextButton(onClick = onSource) {
-            Icon(Icons.AutoMirrored.Filled.OpenInNew, null, Modifier.size(16.dp))
-            Spacer(Modifier.width(6.dp)); Text("View source and licensing")
+        if (SourcePolicy.isSafeHttps(item.sourceUrl)) {
+            TextButton(onClick = onSource) {
+                Icon(Icons.AutoMirrored.Filled.OpenInNew, null, Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp)); Text("View source and licensing")
+            }
         }
     }
 }
