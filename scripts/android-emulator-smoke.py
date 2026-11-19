@@ -37,21 +37,39 @@ def wait_boot(serial, deadline=180):
     raise TimeoutError("Android emulator never finished booting")
 
 
+UI_DUMP = "/data/local/tmp/goreecloud-gif-ui.xml"
+
+
 def nodes(serial):
-    adb(serial, "shell", "uiautomator", "dump", "/sdcard/gif-smoke.xml", timeout=35)
-    xml = adb(serial, "shell", "cat", "/sdcard/gif-smoke.xml", timeout=12)
-    return list(ET.fromstring(xml).iter("node"))
+    # /sdcard can be unavailable briefly after boot; the shell-owned temporary
+    # directory remains accessible. Some Android versions exit 0 without
+    # writing a dump while the accessibility service is still starting.
+    output = adb(serial, "shell", "uiautomator", "dump", UI_DUMP, timeout=35)
+    try:
+        xml = adb(serial, "shell", "cat", UI_DUMP, timeout=12)
+    except RuntimeError as exc:
+        raise RuntimeError(f"UI hierarchy not ready ({output.strip()}): {exc}") from exc
+    try:
+        return list(ET.fromstring(xml).iter("node"))
+    except ET.ParseError as exc:
+        raise RuntimeError(f"UI hierarchy incomplete ({output.strip()}): {exc}") from exc
 
 
 def find_node(serial, phrase, exact=False, deadline=45):
     end = time.monotonic() + deadline
+    last_error = None
     while time.monotonic() < end:
-        for node in nodes(serial):
-            name = node.get("text", "") + " " + node.get("content-desc", "")
-            if (phrase == name.strip() if exact else phrase.lower() in name.lower()):
-                return node
+        try:
+            current = nodes(serial)
+            for node in current:
+                name = node.get("text", "") + " " + node.get("content-desc", "")
+                if (phrase == name.strip() if exact else phrase.lower() in name.lower()):
+                    return node
+            last_error = "UI hierarchy did not include the requested element"
+        except (RuntimeError, ET.ParseError, subprocess.TimeoutExpired) as exc:
+            last_error = str(exc)
         time.sleep(2)
-    raise AssertionError(f"Android UI did not expose {phrase!r}")
+    raise AssertionError(f"Android UI did not expose {phrase!r}: {last_error}")
 
 
 def tap(serial, node):
@@ -79,8 +97,10 @@ def main():
     wait_boot(args.serial)
     print("1/6 Emulator booted", flush=True)
     adb(args.serial, "install", "-r", args.apk, timeout=160)
+    adb(args.serial, "shell", "input", "keyevent", "KEYCODE_WAKEUP")
+    adb(args.serial, "shell", "wm", "dismiss-keyguard")
     adb(args.serial, "shell", "am", "start", "-n", PACKAGE + "/.ui.MainActivity")
-    find_node(args.serial, "GoreeCloud GIF's", deadline=60)
+    find_node(args.serial, "GoreeCloud GIF's", deadline=75)
     print("2/6 App installed and launched", flush=True)
     tap(args.serial, find_node(args.serial, "Stickers", exact=True))
     find_node(args.serial, "OpenMoji stickers", deadline=75)
