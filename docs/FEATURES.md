@@ -5,7 +5,7 @@
 | GIF search and pagination | Implemented via anonymous Openverse JSON adapter (20/page); status errors show retry | Device/network and load-more acceptance |
 | Sticker search | Implemented using pinned local OpenMoji metadata | Catalog coverage and search acceptance |
 | GIF preview | Implemented with Coil GIF renderer | Real-device animation and memory testing |
-| Local favorites | Implemented with Android DataStore and private files | Restart/offline/low-storage tests |
+| Local favorites and saved filters | Implemented with Android DataStore/private files and independent Saved search with type, creator and license filters | Restart/offline/low-storage and UI acceptance |
 | Share to other apps | Implemented with FileProvider and ACTION_SEND | Target apps and URI grant tests |
 | Pick GIF/PNG from requesting apps | Single-item Android ACTION_GET_CONTENT activity integration with MIME validation and temporary read grant | Caller integration/device tests |
 | Download to phone | Implemented with Android MediaStore scoped storage | Android 10–current integration tests |
