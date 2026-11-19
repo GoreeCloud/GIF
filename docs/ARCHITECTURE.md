@@ -2,7 +2,7 @@
 
 **Client:** Kotlin + Jetpack Compose; native Android single-activity interface. The UI state is owned by GalleryViewModel and flows from the search adapters and DataStore. There is currently no server.
 
-**GIF search:** user-entered text -> HTTPS Openverse API query (extension=gif, mature=false) -> metadata filter (gif, non-mature, acceptable external HTTPS links) -> Coil thumbnails / detail -> explicit share/favorite/download acquisition. Third-party GIF hosts receive normal fetches for selected media; not a GoreeCloud relay.
+**GIF search:** user-entered text -> anonymous HTTPS Openverse API query (extension=gif, mature=false, at most 20 per page; higher page sizes return HTTP 401) -> metadata filter (gif, non-mature, acceptable external HTTPS links) -> Coil thumbnails / detail -> explicit share/favorite/download acquisition. Subsequent pages load only when the user selects "Load more GIFs". Search errors persist visibly with a retry action. Third-party GIF hosts receive normal fetches for selected media; not a GoreeCloud relay.
 
 **Sticker search:** local OpenMoji JSON from app assets (pinned upstream revision) -> local metadata match -> official upstream PNG URL at 72px for thumbnails / 618px for sharing. Full resolution is downloaded only on explicit actions. Names, tags, authors and licensing are in the bundled catalog.
 
