@@ -6,7 +6,7 @@
 
 **Sticker search:** local OpenMoji JSON from app assets (pinned upstream revision) -> local metadata match -> official upstream PNG URL at 72px for thumbnails / 618px for sharing. Full resolution is downloaded only on explicit actions. Names, tags, authors and licensing are in the bundled catalog.
 
-**Storage:** DataStore preferences holds small favorite metadata; app-private files/favorites contains original image bytes. The share cache uses cache/shares; content shares via a non-exported AndroidX FileProvider, with temporary URI read grants only. Download uses MediaStore pending media insertion in Pictures/GoreeCloud GIFs. No broad file storage permission is requested.
+**Storage:** DataStore preferences holds small favorite metadata; app-private files/favorites contains original image bytes. The share cache uses cache/shares; content shares via an app-owned subclass of AndroidX FileProvider (non-exported), with temporary URI read grants only. The exported activity also handles specific `ACTION_GET_CONTENT` image requests; a user-selected GIF/PNG is returned as a `content://` URI via `setResult` with temporary read permission. Selection is restricted to the requesting MIME family and never grants folder-wide access. Download uses MediaStore pending media insertion in Pictures/GoreeCloud GIFs. No broad file storage permission is requested.
 
 **Controls:** no HTTP cleartext, external URL validation plus a public-address-only DNS resolver, no redirects for explicit GIF/PNG acquisition, HTTPS-only redirects for Coil previews to public hosts, bounded 25 MiB downloads, magic byte checks (GIF/PNG), temporary files with atomic rename, no executable extensions, no analytics and no background network scanning.
 

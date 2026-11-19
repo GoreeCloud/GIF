@@ -7,6 +7,7 @@
 | GIF preview | Implemented with Coil GIF renderer | Real-device animation and memory testing |
 | Local favorites | Implemented with Android DataStore and private files | Restart/offline/low-storage tests |
 | Share to other apps | Implemented with FileProvider and ACTION_SEND | Target apps and URI grant tests |
+| Pick GIF/PNG from requesting apps | Single-item Android ACTION_GET_CONTENT activity integration with MIME validation and temporary read grant | Caller integration/device tests |
 | Download to phone | Implemented with Android MediaStore scoped storage | Android 10–current integration tests |
 | Attribution/source | Implemented in detail sheet | Format/readability review |
 | Public DNS and HTTPS media hardening | Implemented in source with address validation, redirect separation and local unit tests | Real-network, DNS64 and device regression testing |

@@ -19,6 +19,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -40,6 +41,7 @@ import androidx.lifecycle.lifecycleScope
 import coil3.compose.AsyncImage
 import com.goreecloud.gifs.data.MediaItem
 import com.goreecloud.gifs.data.MediaKind
+import com.goreecloud.gifs.data.PickerPolicy
 import com.goreecloud.gifs.data.SourcePolicy
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -49,12 +51,23 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val requestedMime = if (intent?.action == Intent.ACTION_GET_CONTENT) intent.type?.lowercase() else null
+        if (intent?.action == Intent.ACTION_GET_CONTENT &&
+            !PickerPolicy.isSupported(requestedMime)) {
+            setResult(RESULT_CANCELED)
+            finish()
+            return
+        }
         setContent {
             GoreeCloudTheme {
                 GalleryScreen(
                     viewModel = vm,
                     onShare = { item -> send(item) },
-                    onSource = { url -> openSource(url) }
+                    onSource = { url -> openSource(url) },
+                    onPick = if (requestedMime != null) {
+                        { item: MediaItem -> pick(item, requestedMime) }
+                    } else null,
+                    requestedMime = requestedMime
                 )
             }
         }
@@ -79,6 +92,27 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun pick(item: MediaItem, requestedMime: String) {
+        if (!PickerPolicy.accepts(requestedMime, item)) {
+            vm.showMessage("This app requested a different image format.")
+            return
+        }
+        lifecycleScope.launch {
+            try {
+                val uri = vm.shareUri(item)
+                val result = Intent().apply {
+                    setDataAndType(uri, item.mimeType)
+                    clipData = ClipData.newUri(contentResolver, item.title, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                setResult(RESULT_OK, result)
+                finish()
+            } catch (error: Exception) {
+                vm.showMessage(error.message ?: "Unable to provide this image.")
+            }
+        }
+    }
+
     private fun openSource(url: String) {
         if (!SourcePolicy.isSafeHttps(url)) return
         startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
@@ -90,7 +124,9 @@ class MainActivity : ComponentActivity() {
 private fun GalleryScreen(
     viewModel: GalleryViewModel,
     onShare: (MediaItem) -> Unit,
-    onSource: (String) -> Unit
+    onSource: (String) -> Unit,
+    onPick: ((MediaItem) -> Unit)?,
+    requestedMime: String?
 ) {
     val results by viewModel.results.collectAsStateWithLifecycle()
     val favorites by viewModel.favorites.collectAsStateWithLifecycle()
@@ -100,7 +136,9 @@ private fun GalleryScreen(
     val searchError by viewModel.searchError.collectAsStateWithLifecycle()
     val error by viewModel.message.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableIntStateOf(0) }
-    var type by rememberSaveable { mutableStateOf(MediaKind.GIF.name) }
+    var type by rememberSaveable {
+        mutableStateOf(PickerPolicy.defaultKind(requestedMime).name)
+    }
     var query by rememberSaveable { mutableStateOf("") }
     var selected by remember { mutableStateOf<MediaItem?>(null) }
     var busyId by remember { mutableStateOf<String?>(null) }
@@ -121,9 +159,9 @@ private fun GalleryScreen(
         }
     }
 
-    val shown = if (tab == 0) results else favorites.filter {
+    val shown = (if (tab == 0) results else favorites.filter {
         query.isBlank() || it.title.contains(query, ignoreCase = true)
-    }
+    }).filter { requestedMime == null || PickerPolicy.accepts(requestedMime, it) }
     val favoriteIds = favorites.map { it.id }.toSet()
 
     fun favorite(item: MediaItem) {
@@ -189,7 +227,8 @@ private fun GalleryScreen(
                     Column(Modifier.weight(1f)) {
                         Text("GoreeCloud GIF's", style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold)
-                        Text("Find it. Save it. Send it.",
+                        Text(if (onPick != null) "Choose media for another app."
+                             else "Find it. Save it. Send it.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -223,12 +262,16 @@ private fun GalleryScreen(
                         FilterChip(
                             selected = kind == MediaKind.GIF,
                             onClick = { type = MediaKind.GIF.name },
+                            enabled = requestedMime == null || requestedMime == "image/*" ||
+                                requestedMime == "image/gif",
                             label = { Text("GIFs") },
                             leadingIcon = { Icon(Icons.Default.Movie, null, Modifier.size(18.dp)) }
                         )
                         FilterChip(
                             selected = kind == MediaKind.STICKER,
                             onClick = { type = MediaKind.STICKER.name },
+                            enabled = requestedMime == null || requestedMime == "image/*" ||
+                                requestedMime == "image/png",
                             label = { Text("Stickers") },
                             leadingIcon = { Icon(Icons.Default.EmojiEmotions, null, Modifier.size(18.dp)) }
                         )
@@ -299,7 +342,8 @@ private fun GalleryScreen(
                             enabled = busyId == null,
                             onSelect = { selected = item },
                             onFavorite = { favorite(item) },
-                            onShare = { onShare(item) }
+                            onShare = { (onPick ?: onShare)(item) },
+                            isPicker = onPick != null
                         )
                     }
                     if (tab == 0 && kind == MediaKind.GIF && hasMore) {
@@ -336,8 +380,9 @@ private fun GalleryScreen(
                 isFavorite = item.id in favoriteIds,
                 busy = busyId == item.id,
                 onFavorite = { favorite(item) },
-                onShare = { onShare(item) },
+                onShare = { (onPick ?: onShare)(item) },
                 onDownload = { download(item) },
+                isPicker = onPick != null,
                 onSource = { onSource(item.sourceUrl) }
             )
         }
@@ -365,7 +410,8 @@ private fun MediaTile(
     enabled: Boolean,
     onSelect: () -> Unit,
     onFavorite: () -> Unit,
-    onShare: () -> Unit
+    onShare: () -> Unit,
+    isPicker: Boolean
 ) {
     Surface(
         shape = RoundedCornerShape(22.dp),
@@ -394,8 +440,11 @@ private fun MediaTile(
                 }
                 IconButton(onClick = onShare, enabled = enabled,
                     modifier = Modifier.size(44.dp)) {
-                    Icon(Icons.AutoMirrored.Filled.Send,
-                        contentDescription = "Share " + item.title)
+                    Icon(
+                        if (isPicker) Icons.Default.CheckCircle
+                        else Icons.AutoMirrored.Filled.Send,
+                        contentDescription = (if (isPicker) "Choose " else "Share ") + item.title
+                    )
                 }
                 IconButton(onClick = onSelect, modifier = Modifier.size(44.dp)) {
                     Icon(Icons.Default.MoreHoriz, contentDescription = "More options for " + item.title)
@@ -413,6 +462,7 @@ private fun MediaDetail(
     onFavorite: () -> Unit,
     onShare: () -> Unit,
     onDownload: () -> Unit,
+    isPicker: Boolean,
     onSource: () -> Unit
 ) {
     Column(
@@ -433,8 +483,13 @@ private fun MediaDetail(
         Spacer(Modifier.height(18.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = onShare, enabled = !busy, modifier = Modifier.weight(1f)) {
-                Icon(Icons.AutoMirrored.Filled.Send, null, Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp)); Text("Share")
+                Icon(
+                    if (isPicker) Icons.Default.CheckCircle
+                    else Icons.AutoMirrored.Filled.Send,
+                    null, Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(if (isPicker) "Use in app" else "Share")
             }
             Button(onClick = onDownload, enabled = !busy, modifier = Modifier.weight(1f)) {
                 Icon(Icons.Default.Download, null, Modifier.size(18.dp))
@@ -448,7 +503,7 @@ private fun MediaDetail(
             Text(if (isFavorite) "Remove from favorites" else "Save offline favorite")
         }
         TextButton(onClick = onSource) {
-            Icon(Icons.Default.OpenInNew, null, Modifier.size(16.dp))
+            Icon(Icons.AutoMirrored.Filled.OpenInNew, null, Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp)); Text("View source and licensing")
         }
     }
