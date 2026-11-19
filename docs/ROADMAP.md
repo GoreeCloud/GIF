@@ -1,0 +1,20 @@
+# Roadmap — GoreeCloud GIF's
+
+## Implemented in development source
+- Native Android Jetpack Compose app and local app-only navigation.
+- Openverse GIF search with licensing attribution.
+- Searchable OpenMoji catalog indexed from a pinned, bundled data snapshot.
+- Save favorites offline, share MIME-correct content URIs, export to MediaStore.
+- Initial automated tests, build workflows and security bounds.
+
+## Next development priorities (not implemented)
+1. Verify successful CI, emulator and physical-device behavior, share targets and downloaded file integrity.
+2. Add pagination, network retry/backoff and thumbnail disk-cache limits.
+3. Build a first-party image detail attribution/copy-credit action; improve content rights guidance.
+4. Add sticker packs, own imported media, categories, collections, search filters and local export/import.
+5. Audit inclusive design, screen reader controls, RTL, tablet layouts and automated image UI tests.
+6. Add optional self-hosted source adapters behind user consent and explicit endpoint trust.
+7. Assess GoreeCloud UI native bridge, GoreeShield, Wardveil, Identity and Mesh integration requirements before any Anchor designation.
+8. Validate source licenses and SBOM; establish signed, reproducible release process.
+
+No publication deadline or Anchor release is committed.

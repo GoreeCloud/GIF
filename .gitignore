@@ -1,0 +1,21 @@
+# Local Android tools and compiled output
+.gradle/
+.idea/
+*.iml
+local.properties
+**/build/
+*.apk
+*.aab
+captures/
+.externalNativeBuild/
+.cxx/
+.DS_Store
+*.jks
+*.keystore
+*.p12
+*.pem
+.env*
+!*.example
+
+# Kotlin compiler session markers
+.kotlin/
