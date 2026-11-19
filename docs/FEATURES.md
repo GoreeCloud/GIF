@@ -13,6 +13,7 @@
 | GIF trending / personalized recommendations | Not implemented | Product/relevance planning |
 | Sticker pack installation into third-party keyboards | Not implemented | App-specific APIs / permissions |
 | Cloud synchronization | Not implemented | Consent, encryption, identity and Mesh |
+| Short-lived CI debug APK artifact | Implemented in workflow source; uploads only after tests/lint/build pass, with SHA-256 checksum | GitHub Actions artifact and installation verification |
 | Stable signed APK | Not implemented | CI, release and device acceptance |
 
 Passing source static checks alone does not establish platform acceptance.
