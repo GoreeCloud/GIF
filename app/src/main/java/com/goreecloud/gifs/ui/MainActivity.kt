@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -44,6 +45,8 @@ import coil3.compose.AsyncImage
 import com.goreecloud.gifs.data.MediaAttribution
 import com.goreecloud.gifs.data.MediaItem
 import com.goreecloud.gifs.data.MediaKind
+import com.goreecloud.gifs.data.SavedGallery
+import com.goreecloud.gifs.data.SavedKind
 import com.goreecloud.gifs.data.PickerPolicy
 import com.goreecloud.gifs.data.SourcePolicy
 import kotlinx.coroutines.delay
@@ -142,7 +145,10 @@ private fun GalleryScreen(
     var type by rememberSaveable {
         mutableStateOf(PickerPolicy.defaultKind(requestedMime).name)
     }
-    var query by rememberSaveable { mutableStateOf("") }
+    var exploreQuery by rememberSaveable { mutableStateOf("") }
+    var savedQuery by rememberSaveable { mutableStateOf("") }
+    var savedFilter by rememberSaveable { mutableStateOf(SavedKind.ALL.name) }
+    val query = if (tab == 0) exploreQuery else savedQuery
     var selected by remember { mutableStateOf<MediaItem?>(null) }
     var busyId by remember { mutableStateOf<String?>(null) }
     val kind = MediaKind.valueOf(type)
@@ -150,10 +156,10 @@ private fun GalleryScreen(
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
 
-    LaunchedEffect(query, type, tab) {
+    LaunchedEffect(exploreQuery, type, tab) {
         if (tab == 0) {
-            delay(if (query.isBlank()) 0 else 400)
-            viewModel.search(query, kind)
+            delay(if (exploreQuery.isBlank()) 0 else 400)
+            viewModel.search(exploreQuery, kind)
         }
     }
     LaunchedEffect(error) {
@@ -163,9 +169,11 @@ private fun GalleryScreen(
         }
     }
 
-    val shown = (if (tab == 0) results else favorites.filter {
-        query.isBlank() || it.title.contains(query, ignoreCase = true)
-    }).filter { requestedMime == null || PickerPolicy.accepts(requestedMime, it) }
+    val shown = if (tab == 0) {
+        results.filter { requestedMime == null || PickerPolicy.accepts(requestedMime, it) }
+    } else {
+        SavedGallery.filter(favorites, savedQuery, SavedKind.valueOf(savedFilter), requestedMime)
+    }
     val favoriteIds = favorites.map { it.id }.toSet()
 
     fun favorite(item: MediaItem) {
@@ -255,7 +263,11 @@ private fun GalleryScreen(
                 }
                 Spacer(Modifier.height(20.dp))
                 OutlinedTextField(
-                    value = query, onValueChange = { query = it.take(100) },
+                    value = query,
+                    onValueChange = {
+                        if (tab == 0) exploreQuery = it.take(100)
+                        else savedQuery = it.take(100)
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp),
                     singleLine = true,
@@ -263,13 +275,18 @@ private fun GalleryScreen(
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     trailingIcon = {
                         if (query.isNotEmpty()) {
-                            IconButton(onClick = { query = "" }) {
+                            IconButton(onClick = {
+                                if (tab == 0) exploreQuery = "" else savedQuery = ""
+                            }) {
                                 Icon(Icons.Default.Close, contentDescription = "Clear search")
                             }
                         }
                     },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(onSearch = { viewModel.search(query, kind) })
+                    keyboardActions = KeyboardActions(onSearch = {
+                        if (tab == 0) viewModel.search(exploreQuery, kind)
+                        focusManager.clearFocus()
+                    })
                 )
                 if (tab == 0) {
                     Spacer(Modifier.height(14.dp))
@@ -289,6 +306,29 @@ private fun GalleryScreen(
                                 requestedMime == "image/png",
                             label = { Text("Stickers") },
                             leadingIcon = { Icon(Icons.Default.EmojiEmotions, null, Modifier.size(18.dp)) }
+                        )
+                    }
+                } else {
+                    Spacer(Modifier.height(14.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = savedFilter == SavedKind.ALL.name,
+                            onClick = { savedFilter = SavedKind.ALL.name },
+                            label = { Text("All") }
+                        )
+                        FilterChip(
+                            selected = savedFilter == SavedKind.GIF.name,
+                            onClick = { savedFilter = SavedKind.GIF.name },
+                            enabled = requestedMime == null || requestedMime == "image/*" ||
+                                requestedMime == "image/gif",
+                            label = { Text("GIFs") }
+                        )
+                        FilterChip(
+                            selected = savedFilter == SavedKind.STICKER.name,
+                            onClick = { savedFilter = SavedKind.STICKER.name },
+                            enabled = requestedMime == null || requestedMime == "image/*" ||
+                                requestedMime == "image/png",
+                            label = { Text("Stickers") }
                         )
                     }
                 }
@@ -320,13 +360,16 @@ private fun GalleryScreen(
                             tint = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.height(12.dp))
                         Text(
-                            if (tab == 1) "Nothing saved yet"
+                            if (tab == 1 && favorites.isEmpty()) "Nothing saved yet"
+                            else if (tab == 1) "No matching saved items"
                             else if (searchError != null) "Search unavailable"
                             else "No results found",
                             style = MaterialTheme.typography.titleMedium
                         )
                         Text(
-                            if (tab == 1) "Tap the heart on a GIF or sticker to keep it offline."
+                            if (tab == 1 && favorites.isEmpty())
+                                "Tap the heart on a GIF or sticker to keep it offline."
+                            else if (tab == 1) "Try another search or switch the saved media filter."
                             else searchError ?: "Try a different phrase or switch media type.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,

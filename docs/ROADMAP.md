@@ -11,7 +11,7 @@
 1. Run the manually triggered Android emulator acceptance workflow against sticker favorites, download and source UI. Independently verify physical-device behavior, share targets and downloaded file integrity.
 2. Improve network retry/backoff, thumbnail disk-cache limits and search relevance; pagination is implemented in development source.
 3. Verify clipboard attribution behavior on supported devices; improve content rights guidance and media-specific license notices.
-4. Add sticker packs, own imported media, categories, collections, search filters and local export/import.
+4. Extend basic Saved type filters with sticker packs, imported media, collections, search refinements and local export/import.
 5. Audit inclusive design, screen reader controls, RTL, tablet layouts and automated image UI tests.
 6. Add optional self-hosted source adapters behind user consent and explicit endpoint trust.
 7. Assess GoreeCloud UI native bridge, GoreeShield, Wardveil, Identity and Mesh integration requirements before any Anchor designation.
