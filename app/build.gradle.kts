@@ -47,5 +47,5 @@ dependencies {
     implementation("io.coil-kt.coil3:coil-gif:3.6.3")
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.6.3")
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.json:json:20240303")
+    testImplementation("org.json:json:20260814")
 }
