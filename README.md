@@ -39,7 +39,7 @@ Openverse search needs network access. Sticker *metadata search* is offline; fir
 
 The first-party app source is **MIT** (see LICENSE). The bundled OpenMoji catalog metadata and remotely fetched OpenMoji art are **CC BY-SA 4.0**, not MIT; see `third_party/openmoji` and [OpenMoji](https://github.com/hfg-gmuend/openmoji). GIFs belong to their respective creators. Openverse returns per-item licenses and attribution; **not every GIF is free of reuse conditions**. Always respect creator attribution, license, share-alike and noncommercial terms, where applicable. The in-app preview shows source/credit.
 
-Openverse is a public external service subject to availability and anonymous rate limits. Direct GIF URLs are hosted by third-party sources. GIFs exceeding 25 MiB, non-HTTPS links, unsafe local-network URLs, redirects and unexpected formats are rejected. Content is not uploaded to GoreeCloud.
+Openverse is a public external service subject to availability and anonymous rate limits. Direct GIF URLs are hosted by third-party sources. GIFs exceeding 25 MiB, non-HTTPS links, local/reserved IP resolutions, download redirects and unexpected formats are rejected. Image previews use a separate HTTPS-only redirect policy with public DNS checks. Content is not uploaded to GoreeCloud.
 
 See [Architecture](docs/ARCHITECTURE.md), [Features](docs/FEATURES.md), [Objectives](docs/OBJECTIVES.md), [Roadmap](docs/ROADMAP.md) and [Security](SECURITY.md).
 

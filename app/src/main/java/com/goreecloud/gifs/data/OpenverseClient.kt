@@ -120,10 +120,11 @@ class OpenverseClient(private val client: OkHttpClient) {
     }
 }
 
-fun mediaHttpClient() = OkHttpClient.Builder()
+fun mediaHttpClient(allowHttpsRedirects: Boolean = false) = OkHttpClient.Builder()
+    .dns(PublicDns())
     .callTimeout(30, TimeUnit.SECONDS)
     .connectTimeout(10, TimeUnit.SECONDS)
     .readTimeout(20, TimeUnit.SECONDS)
-    .followRedirects(false)
+    .followRedirects(allowHttpsRedirects)
     .followSslRedirects(false)
     .build()
