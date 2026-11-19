@@ -5,6 +5,8 @@ All operations target a named emulator serial. Never touch a physical device.
 No third-party Python dependencies or private account credentials.
 """
 import argparse
+import os
+from pathlib import Path
 import re
 import subprocess
 import sys
@@ -58,18 +60,53 @@ def nodes(serial):
 def find_node(serial, phrase, exact=False, deadline=45):
     end = time.monotonic() + deadline
     last_error = None
+    last_labels = []
     while time.monotonic() < end:
         try:
             current = nodes(serial)
+            last_labels = []
             for node in current:
-                name = node.get("text", "") + " " + node.get("content-desc", "")
-                if (phrase == name.strip() if exact else phrase.lower() in name.lower()):
+                name = (node.get("text", "") + " " + node.get("content-desc", "")).strip()
+                if name and name not in last_labels:
+                    last_labels.append(name[:70])
+                if (phrase == name if exact else phrase.lower() in name.lower()):
                     return node
             last_error = "UI hierarchy did not include the requested element"
         except (RuntimeError, ET.ParseError, subprocess.TimeoutExpired) as exc:
             last_error = str(exc)
         time.sleep(2)
-    raise AssertionError(f"Android UI did not expose {phrase!r}: {last_error}")
+    raise AssertionError(
+        f"Android UI did not expose {phrase!r}: {last_error}. "
+        f"Last UI labels: {last_labels[-25:]!r}"
+    )
+
+
+def capture_failure(serial):
+    """Collect QA-only evidence from the isolated emulator, never the physical phone."""
+    if not serial.startswith("emulator-"):
+        return
+    folder = Path(os.environ.get("RUNNER_TEMP", "/tmp"))
+    screenshot = folder / "gif-smoke-failure.png"
+    hierarchy = folder / "gif-smoke-hierarchy.xml"
+    try:
+        with screenshot.open("wb") as file:
+            result = subprocess.run(
+                ["adb", "-s", serial, "exec-out", "screencap", "-p"],
+                stdout=file, stderr=subprocess.PIPE, timeout=20, check=False,
+            )
+        if result.returncode:
+            screenshot.unlink(missing_ok=True)
+        else:
+            print(f"QA screenshot saved: {screenshot}", flush=True)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        print(f"QA screenshot unavailable: {exc}", flush=True)
+    try:
+        xml = adb(serial, "shell", "cat", UI_DUMP, timeout=15)
+        if xml.startswith("<?xml") or xml.startswith("<hierarchy"):
+            hierarchy.write_text(xml[:1_000_000], encoding="utf-8")
+            print(f"QA hierarchy saved: {hierarchy}", flush=True)
+    except (RuntimeError, OSError, subprocess.TimeoutExpired) as exc:
+        print(f"QA hierarchy unavailable: {exc}", flush=True)
 
 
 def tap(serial, node):
@@ -111,7 +148,8 @@ def main():
     tap(args.serial, find_node(args.serial, "Saved (1)", exact=True))
     find_node(args.serial, "Offline favorites", deadline=30)
     tap(args.serial, find_node(args.serial, "More options for", deadline=30))
-    find_node(args.serial, "Download", deadline=30)
+    # Wait for the Compose bottom sheet rather than assuming it opens instantly.
+    find_node(args.serial, "Download", deadline=45)
     print("4/6 Offline favorites and media detail verified", flush=True)
     tap(args.serial, find_node(args.serial, "Download", exact=True))
     find_node(args.serial, "Saved to Pictures", deadline=60)
@@ -126,4 +164,11 @@ if __name__ == "__main__":
         main()
     except Exception as err:
         print(f"SMOKE_FAILURE: {type(err).__name__}: {err}", file=sys.stderr, flush=True)
+        # The harness never probes any non-emulator serial.
+        try:
+            at = sys.argv.index("--serial")
+            serial = sys.argv[at + 1]
+        except (ValueError, IndexError):
+            serial = "emulator-5554"
+        capture_failure(serial)
         sys.exit(1)
