@@ -6,7 +6,7 @@ A native, open-source Android gallery for finding, saving, and sharing GIFs and 
 
 ## Capabilities
 
-- GIF search using the open [Openverse](https://openverse.org/) API, with mature results filtered and source/license credit shown.
+- GIF search using the open [Openverse](https://openverse.org/) API, with mature results filtered, source/license credit shown, and explicit "Load more GIFs" pagination (20 per request for anonymous API access).
 - Sticker search across the bundled, attributed [OpenMoji](https://openmoji.org/) catalog. Search names, tags, and categories without a network connection; image thumbnails and full-resolution artwork are fetched on demand.
 - Native Compose discovery grid and preview sheet with light/dark GoreeCloud UI alpha token roles.
 - Offline favorites: explicitly favorited GIFs and stickers are copied to app-private storage.

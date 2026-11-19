@@ -2,7 +2,7 @@
 
 | Feature | Source status | Acceptance remaining |
 | --- | --- | --- |
-| GIF search | Implemented via Openverse JSON adapter | Device/network and offline-error testing |
+| GIF search and pagination | Implemented via anonymous Openverse JSON adapter (20/page); status errors show retry | Device/network and load-more acceptance |
 | Sticker search | Implemented using pinned local OpenMoji metadata | Catalog coverage and search acceptance |
 | GIF preview | Implemented with Coil GIF renderer | Real-device animation and memory testing |
 | Local favorites | Implemented with Android DataStore and private files | Restart/offline/low-storage tests |

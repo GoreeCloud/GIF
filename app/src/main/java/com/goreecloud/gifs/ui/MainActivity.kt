@@ -11,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,6 +33,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -93,6 +95,9 @@ private fun GalleryScreen(
     val results by viewModel.results.collectAsStateWithLifecycle()
     val favorites by viewModel.favorites.collectAsStateWithLifecycle()
     val loading by viewModel.loading.collectAsStateWithLifecycle()
+    val loadingMore by viewModel.loadingMore.collectAsStateWithLifecycle()
+    val hasMore by viewModel.hasMore.collectAsStateWithLifecycle()
+    val searchError by viewModel.searchError.collectAsStateWithLifecycle()
     val error by viewModel.message.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var type by rememberSaveable { mutableStateOf(MediaKind.GIF.name) }
@@ -249,18 +254,34 @@ private fun GalleryScreen(
             if (shown.isEmpty() && !loading) {
                 Box(Modifier.fillMaxSize().padding(30.dp), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(if (tab == 1) Icons.Default.FavoriteBorder else Icons.Default.ImageSearch,
+                        Icon(
+                            if (tab == 1) Icons.Default.FavoriteBorder
+                            else if (searchError != null) Icons.Default.WifiOff
+                            else Icons.Default.ImageSearch,
                             contentDescription = null, modifier = Modifier.size(48.dp),
                             tint = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.height(12.dp))
-                        Text(if (tab == 1) "Nothing saved yet" else "No results found",
-                            style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            if (tab == 1) "Nothing saved yet"
+                            else if (searchError != null) "Search unavailable"
+                            else "No results found",
+                            style = MaterialTheme.typography.titleMedium
+                        )
                         Text(
                             if (tab == 1) "Tap the heart on a GIF or sticker to keep it offline."
-                            else "Try a different phrase or switch media type.",
+                            else searchError ?: "Try a different phrase or switch media type.",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
                         )
+                        if (tab == 0 && searchError != null) {
+                            Spacer(Modifier.height(14.dp))
+                            Button(onClick = { viewModel.search(query, kind) }) {
+                                Icon(Icons.Default.Refresh, null, Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Try again")
+                            }
+                        }
                     }
                 }
             } else {
@@ -280,6 +301,28 @@ private fun GalleryScreen(
                             onFavorite = { favorite(item) },
                             onShare = { onShare(item) }
                         )
+                    }
+                    if (tab == 0 && kind == MediaKind.GIF && hasMore) {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            Box(Modifier.fillMaxWidth().padding(vertical = 14.dp),
+                                contentAlignment = Alignment.Center) {
+                                OutlinedButton(
+                                    onClick = { viewModel.loadMore() },
+                                    enabled = !loadingMore
+                                ) {
+                                    if (loadingMore) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(18.dp),
+                                            strokeWidth = 2.dp
+                                        )
+                                    } else {
+                                        Icon(Icons.Default.Add, null, Modifier.size(18.dp))
+                                    }
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(if (loadingMore) "Loading more…" else "Load more GIFs")
+                                }
+                            }
+                        }
                     }
                 }
             }
