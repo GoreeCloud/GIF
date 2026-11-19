@@ -36,8 +36,15 @@ jobs:
           SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
           AVDMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -path '*/bin/avdmanager' | sort -V | tail -1)"
           test -x "$AVDMANAGER"
-          echo no | "$AVDMANAGER" create avd -n GoreeCloudGIFSmoke -k 'system-images;android-36;default;x86_64' --device 'pixel_5' --force
-          printf '\nhw.ramSize=1536M\ndisk.dataPartition.size=2048M\nsdcard.size=128 MB\n' >> "$HOME/.android/avd/GoreeCloudGIFSmoke.avd/config.ini"
+          # The hosted runner can override $HOME/.android/avd; select an explicit
+          # location and fail with a clear error if avdmanager did not create it.
+          export ANDROID_AVD_HOME="$RUNNER_TEMP/goreecloud-avds"
+          mkdir -p "$ANDROID_AVD_HOME"
+          AVD_DIR="$ANDROID_AVD_HOME/GoreeCloudGIFSmoke.avd"
+          "$AVDMANAGER" create avd -n GoreeCloudGIFSmoke -k 'system-images;android-36;default;x86_64' --device 'pixel_5' --force --path "$AVD_DIR" < <(printf 'no\n')
+          test -f "$AVD_DIR/config.ini" || { echo "AVD configuration missing: $AVD_DIR/config.ini"; exit 1; }
+          printf '\nhw.ramSize=1536M\ndisk.dataPartition.size=2048M\nsdcard.size=128 MB\n' >> "$AVD_DIR/config.ini"
+          echo "Using AVD at $AVD_DIR"
           if [ -e /dev/kvm ]; then sudo chmod 666 /dev/kvm; fi
           "$SDK_ROOT/emulator/emulator" -avd GoreeCloudGIFSmoke -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -memory 1536 -port 5580 > "$RUNNER_TEMP/gif-emulator.log" 2>&1 &
           EMULATOR_PID=$!
