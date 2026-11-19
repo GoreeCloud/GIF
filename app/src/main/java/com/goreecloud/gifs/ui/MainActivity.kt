@@ -124,7 +124,9 @@ class MainActivity : ComponentActivity() {
 private fun GalleryScreen(
     viewModel: GalleryViewModel,
     onShare: (MediaItem) -> Unit,
-    onSource: (String) -> Unit
+    onSource: (String) -> Unit,
+    onPick: ((MediaItem) -> Unit)?,
+    requestedMime: String?
 ) {
     val results by viewModel.results.collectAsStateWithLifecycle()
     val favorites by viewModel.favorites.collectAsStateWithLifecycle()
