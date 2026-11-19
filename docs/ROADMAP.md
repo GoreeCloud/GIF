@@ -8,7 +8,7 @@
 - Initial automated tests, build workflows and security bounds.
 
 ## Next development priorities (not implemented)
-1. Verify successful CI, emulator and physical-device behavior, share targets and downloaded file integrity.
+1. Run the manually triggered Android emulator acceptance workflow against sticker favorites, download and source UI. Independently verify physical-device behavior, share targets and downloaded file integrity.
 2. Improve network retry/backoff, thumbnail disk-cache limits and search relevance; pagination is implemented in development source.
 3. Verify clipboard attribution behavior on supported devices; improve content rights guidance and media-specific license notices.
 4. Add sticker packs, own imported media, categories, collections, search filters and local export/import.

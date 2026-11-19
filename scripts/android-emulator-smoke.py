@@ -1,0 +1,109 @@
+#!/usr/bin/env python3
+"""Manual-only Android 36 emulator acceptance: local stickers, favorite, download.
+
+All operations target a named emulator serial. Never touch a physical device.
+No third-party Python dependencies or private account credentials.
+"""
+import argparse
+import re
+import subprocess
+import sys
+import time
+import xml.etree.ElementTree as ET
+
+PACKAGE = "com.goreecloud.gifs"
+BOUNDS = re.compile(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]")
+
+
+def adb(serial, *args, timeout=30):
+    result = subprocess.run(
+        ["adb", "-s", serial, *map(str, args)],
+        text=True, capture_output=True, timeout=timeout, check=False,
+    )
+    if result.returncode:
+        raise RuntimeError(f"adb {' '.join(map(str, args))} failed: {result.stderr[:400]}")
+    return result.stdout
+
+
+def wait_boot(serial, deadline=180):
+    end = time.monotonic() + deadline
+    while time.monotonic() < end:
+        try:
+            if adb(serial, "shell", "getprop", "sys.boot_completed", timeout=10).strip() == "1":
+                return
+        except (RuntimeError, subprocess.TimeoutExpired):
+            pass
+        time.sleep(3)
+    raise TimeoutError("Android emulator never finished booting")
+
+
+def nodes(serial):
+    adb(serial, "shell", "uiautomator", "dump", "/sdcard/gif-smoke.xml", timeout=35)
+    xml = adb(serial, "shell", "cat", "/sdcard/gif-smoke.xml", timeout=12)
+    return list(ET.fromstring(xml).iter("node"))
+
+
+def find_node(serial, phrase, exact=False, deadline=45):
+    end = time.monotonic() + deadline
+    while time.monotonic() < end:
+        for node in nodes(serial):
+            name = node.get("text", "") + " " + node.get("content-desc", "")
+            if (phrase == name.strip() if exact else phrase.lower() in name.lower()):
+                return node
+        time.sleep(2)
+    raise AssertionError(f"Android UI did not expose {phrase!r}")
+
+
+def tap(serial, node):
+    bounds = BOUNDS.fullmatch(node.get("bounds", ""))
+    if bounds is None:
+        raise AssertionError("UI node has no bounds")
+    left, top, right, bottom = map(int, bounds.groups())
+    adb(serial, "shell", "input", "tap", (left + right) // 2, (top + bottom) // 2)
+
+
+def require_file(serial):
+    # Android debug app run-as is permitted; this does not query private user data.
+    listing = adb(serial, "shell", "run-as", PACKAGE, "ls", "files/favorites")
+    if ".png" not in listing:
+        raise AssertionError(f"No offline favorite PNG in app-private files: {listing[:200]}")
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--serial", default="emulator-5554")
+    parser.add_argument("--apk", required=True)
+    args = parser.parse_args()
+    if not args.serial.startswith("emulator-"):
+        parser.error("Only an emulator serial is allowed")
+    wait_boot(args.serial)
+    print("1/6 Emulator booted", flush=True)
+    adb(args.serial, "install", "-r", args.apk, timeout=160)
+    adb(args.serial, "shell", "am", "start", "-n", PACKAGE + "/.ui.MainActivity")
+    find_node(args.serial, "GoreeCloud GIF's", deadline=60)
+    print("2/6 App installed and launched", flush=True)
+    tap(args.serial, find_node(args.serial, "Stickers", exact=True))
+    find_node(args.serial, "OpenMoji stickers", deadline=75)
+    tap(args.serial, find_node(args.serial, "Save favorite", deadline=50))
+    find_node(args.serial, "Saved (1)", deadline=65)
+    require_file(args.serial)
+    print("3/6 Sticker saved to app-private offline storage", flush=True)
+    tap(args.serial, find_node(args.serial, "Saved (1)", exact=True))
+    find_node(args.serial, "Offline favorites", deadline=30)
+    tap(args.serial, find_node(args.serial, "More options for", deadline=30))
+    find_node(args.serial, "Download", deadline=30)
+    print("4/6 Offline favorites and media detail verified", flush=True)
+    tap(args.serial, find_node(args.serial, "Download", exact=True))
+    find_node(args.serial, "Saved to Pictures", deadline=60)
+    print("5/6 MediaStore phone download confirmed", flush=True)
+    find_node(args.serial, "View source and licensing", deadline=20)
+    print("6/6 Source/attribution action present", flush=True)
+    print("SMOKE_SUCCESS: Android emulator core workflow verified", flush=True)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as err:
+        print(f"SMOKE_FAILURE: {type(err).__name__}: {err}", file=sys.stderr, flush=True)
+        sys.exit(1)

@@ -24,6 +24,8 @@ Android Studio / Android SDK 37, JDK 21 and Gradle wrapper. Minimum Android 10 (
 ./gradlew :app:testDebugUnitTest :app:assembleDebug :app:lintDebug
 ```
 
+A separately triggered GitHub Actions workflow, **Android emulator smoke (manual)**, is included to exercise app startup, OpenMoji search, offline favorite storage and MediaStore export on an isolated Android 36 emulator. This is not a replacement for real physical-device validation and will be reported as unverified until a successful workflow run.
+
 Find the development-signed debug APK at `app/build/outputs/apk/debug/app-debug.apk`. After a passing GitHub Actions Android run, the `goreecloud-gifs-debug-apk` run artifact contains this debug APK and a SHA-256 checksum file for 7 days. Download the artifact from GitHub Actions (signed-in access may be required) and verify the checksum before testing. Debug APKs are for local development, not an audited or production-signed release. Open the project in Android Studio to run on an emulator or authorized device. The app's display name is **GoreeCloud GIF's** and package is `com.goreecloud.gifs`.
 
 ## How to use
