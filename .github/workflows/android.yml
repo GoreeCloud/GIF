@@ -24,8 +24,10 @@ jobs:
           test -x "$SDKMANAGER"
           yes | "$SDKMANAGER" --licenses >/dev/null
           "$SDKMANAGER" "platforms;android-37.0" "build-tools;36.0.0"
-      - name: Validate emulator smoke harness syntax
-        run: python3 -m py_compile scripts/android-emulator-smoke.py
+      - name: Test emulator smoke harness
+        run: |
+          python3 -m py_compile scripts/android-emulator-smoke.py
+          python3 -m unittest discover -s scripts -p 'test_*.py' -v
       - name: Validate unit tests, Android lint and APK build
         run: ./gradlew --no-daemon --console=plain :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
       - name: Record APK SHA-256 checksum
