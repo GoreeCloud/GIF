@@ -1,6 +1,6 @@
 # GoreeCloud GIF's — Android acceptance evidence
 
-**Status:** Development builds pass Android unit/lint/assemble checks; first-party Android emulator **end-to-end acceptance remains incomplete**. No physical-phone installation, stable release, or production deployment is asserted.
+**Status:** The six-step Android 36 cloud-emulator acceptance **passed on the reviewed download-feedback branch and on protected `main`** (run #44648142401, commit `acd9671`). The latest cache-quota merge was separately validated by Android CI; its full emulator retest remains open. No physical-phone installation, Stable release, or production deployment is asserted.
 
 ## CI and acceptance scope
 
@@ -17,19 +17,20 @@
 | [44638020820](https://github.com/GoreeCloud/GIF/actions/runs/44638020820) | SDK setup and app build passed; emulator creation failed because script assumed a nonportable AVD directory | Set explicit runner-temp AVD path in PR #17 |
 | [44639069676](https://github.com/GoreeCloud/GIF/actions/runs/44639069676) | SDK, build and unit tests passed; emulator booted; hierarchy dump under `/sdcard` unavailable at first UI probe | Retry UI hierarchy acquisition and use shell temporary directory in PR #19 |
 | [44640291641](https://github.com/GoreeCloud/GIF/actions/runs/44640291641) | SDK/build, emulator boot, app launch, OpenMoji search and a sticker saved to app-private storage passed (milestones 1–3/6); no Download action found after opening saved item | Capture UI labels, screenshot and hierarchy to distinguish a harness tap problem from a real app-detail bug |
-
 | [44641797977](https://github.com/GoreeCloud/GIF/actions/runs/44641797977) | Android 36 boot, app install, OpenMoji search and app-private sticker save passed (1–3/6); diagnostics show the media-detail bottom sheet was visible but its Download button was pushed below the viewport by the large preview | Reorder the sheet to prioritize Share/Download, cap the preview size and enable vertical scrolling; rerun real emulator acceptance |
-
 | [44644855764](https://github.com/GoreeCloud/GIF/actions/runs/44644855764) | App boot, sticker catalog search, offline favorite and now-visible detail sheet Share/Download passed milestones 1–4/6 on protected main. The screenshot confirms Download is visible; milestone 5 could not observe a snackbar because it was displayed behind the modal sheet | Dismiss modal on success/error and check the actual MediaStore PNG row in the revised smoke harness |
+| [44646285317](https://github.com/GoreeCloud/GIF/actions/runs/44646285317) | **SUCCESS** on reviewed branch commit `2cc9fe0`: all six milestones logged, including app launch, sticker discovery, private offline favorite, reachable media sheet, a PNG MediaStore row and source/attribution action | Confirm the same workflow after merge and complete physical/third-party acceptance |
+| [44647133548](https://github.com/GoreeCloud/GIF/actions/runs/44647133548) | Protected-main rerun failed **before app startup**: emulator UI displayed `System UI isn't responding` during startup | Rerun without conflating this system-component ANR with an app regression; inspect runner resources if repeated |
+| [44648142401](https://github.com/GoreeCloud/GIF/actions/runs/44648142401) | **SUCCESS on protected main**, commit `acd9671`: all six milestones logged, including real private sticker favorite and MediaStore PNG row verification | Keep regression checks and repeat after later application/storage changes |
 
-These results show increasing verification coverage but **not** a successful end-to-end smoke run.
+These results establish a complete branch-level and protected-main emulator pass at the specified revisions, **not** acceptance on physical devices. The PNG MediaStore row check proves a published entry, not byte-for-byte image identity.
 
 ## Exit criteria
 
-1. A manual workflow run finishes successfully on protected `main` and logs all six smoke milestones.
+1. **Verified on commit `acd9671`:** a manual protected-main workflow completed all six smoke milestones; repeat after material changes to app storage and sharing.
 2. The Saved sticker and downloaded PNG remain usable without network connectivity, with local-file and MediaStore evidence.
 3. Native share-sheet and `ACTION_GET_CONTENT` consumers receive MIME-correct read-only URIs on representative Android versions.
 4. Animated GIF preview, accessibility, resource use, storage limits and attributions receive human/device review.
 5. No production signing or release label is applied until release-specific gates are established.
 
-Keep run IDs, evidence, and unresolved blockers in sync with actual provider state.
+Further physical-device and third-party acceptance is tracked in [issue #26](https://github.com/GoreeCloud/GIF/issues/26). Keep run IDs, evidence, and unresolved blockers in sync with actual provider state.
