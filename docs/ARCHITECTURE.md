@@ -12,6 +12,8 @@
 
 **Personal media import:** the user explicitly selects a GIF or PNG from Android's `ACTION_OPEN_DOCUMENT` system picker -> the app reads only the granted `content://` URI -> streams up to 25 MiB into a temporary private file -> checks image magic bytes -> atomically renames under app-private `files/favorites` -> records the local file in DataStore. If the index write fails, the import is rolled back. No persistent document-provider grant or upload is used.
 
+**CI reliability:** Android and manually triggered emulator workflows use the official Java setup action's Gradle dependency cache, keyed by committed Gradle configuration/wrapper metadata. Caching is a performance aid, not a substitute for dependency version pinning, checksum integrity, build tests or release acceptance. SDK license input avoids `yes` SIGPIPE under Bash `pipefail`.
+
 **Controls:** no HTTP cleartext, external URL validation plus a public-address-only DNS resolver, no redirects for explicit GIF/PNG acquisition, HTTPS-only redirects for Coil previews to public hosts, bounded 25 MiB downloads, magic byte checks (GIF/PNG), temporary files with atomic rename, no executable extensions, no analytics and no background network scanning.
 
 **MIPS:** GC UI token values manually mapped from gc-ui (alpha Iris); GoreeShield maps to local-first data/explicit external fetches; Wardveil maps to input/media/transport restrictions; Mesh and Identity have no runtime dependencies. Full platform integrations and release-level verification are not yet complete.
