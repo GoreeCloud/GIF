@@ -470,7 +470,7 @@ private fun GalleryScreen(
                             isPicker = onPick != null
                         )
                     }
-                    if (tab == 0 && kind == MediaKind.GIF && hasMore) {
+                    if (tab == 0 && hasMore) {
                         item(span = { GridItemSpan(maxLineSpan) }) {
                             Box(Modifier.fillMaxWidth().padding(vertical = 14.dp),
                                 contentAlignment = Alignment.Center) {
@@ -487,7 +487,11 @@ private fun GalleryScreen(
                                         Icon(Icons.Default.Add, null, Modifier.size(18.dp))
                                     }
                                     Spacer(Modifier.width(8.dp))
-                                    Text(if (loadingMore) "Loading more…" else "Load more GIFs")
+                                    Text(
+                                        if (loadingMore) "Loading more…"
+                                        else if (kind == MediaKind.GIF) "Load more GIFs"
+                                        else "Load more stickers"
+                                    )
                                 }
                             }
                         }
