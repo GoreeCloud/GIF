@@ -225,8 +225,12 @@ private fun GalleryScreen(
         uiScope.launch {
             try {
                 viewModel.download(item)
+                // SnackbarHost is behind the modal sheet; dismiss first so
+                // both download success and failures are actually visible.
+                selected = null
                 snackbar.showSnackbar("Saved to Pictures / GoreeCloud GIFs")
             } catch (e: Exception) {
+                selected = null
                 snackbar.showSnackbar(e.message ?: "Could not save this image.")
             } finally { busyId = null }
         }

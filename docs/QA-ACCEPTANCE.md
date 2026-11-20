@@ -20,6 +20,8 @@
 
 | [44641797977](https://github.com/GoreeCloud/GIF/actions/runs/44641797977) | Android 36 boot, app install, OpenMoji search and app-private sticker save passed (1–3/6); diagnostics show the media-detail bottom sheet was visible but its Download button was pushed below the viewport by the large preview | Reorder the sheet to prioritize Share/Download, cap the preview size and enable vertical scrolling; rerun real emulator acceptance |
 
+| [44644855764](https://github.com/GoreeCloud/GIF/actions/runs/44644855764) | App boot, sticker catalog search, offline favorite and now-visible detail sheet Share/Download passed milestones 1–4/6 on protected main. The screenshot confirms Download is visible; milestone 5 could not observe a snackbar because it was displayed behind the modal sheet | Dismiss modal on success/error and check the actual MediaStore PNG row in the revised smoke harness |
+
 These results show increasing verification coverage but **not** a successful end-to-end smoke run.
 
 ## Exit criteria
