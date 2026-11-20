@@ -40,7 +40,11 @@ class MediaFiles(private val context: Context, private val client: OkHttpClient)
             val saved = favoriteFile(item)
             if (saved.isFile && saved.length() > 0) return@withLock saved
             val cached = shareFile(item)
-            if (cached.isFile && cached.length() > 0) return@withLock cached
+            if (cached.isFile && cached.length() > 0) {
+                // Keep recently shared URIs safe from quota eviction.
+                cached.setLastModified(System.currentTimeMillis())
+                return@withLock cached
+            }
             if (!SourcePolicy.isSafeHttps(item.url)) throw IOException("Unsafe media URL.")
             val dir = cached.parentFile ?: throw IOException("Missing cache directory")
             if (!dir.isDirectory && !dir.mkdirs()) throw IOException("Cannot make cache directory.")
@@ -73,6 +77,9 @@ class MediaFiles(private val context: Context, private val client: OkHttpClient)
             } finally {
                 temp.delete()
             }
+            // Reclaim old temporary bytes without deleting favorites or media
+            // that may still be in use by a recipient's share target.
+            ShareCacheQuota.prune(dir, protectedName = cached.name)
             cached
         }
     }
