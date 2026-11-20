@@ -35,6 +35,19 @@ class SmokeHarnessTest(unittest.TestCase):
             smoke.tap("emulator-5580", node)
         self.assertEqual(call.call_args.args, ("emulator-5580", "shell", "input", "tap", 70, 130))
 
+    def test_unmatched_ui_reports_visible_labels(self):
+        node = ET.Element("node", {"text": "Offline favorites", "content-desc": ""})
+        with patch.object(smoke, "nodes", return_value=[node]):
+            with patch.object(smoke.time, "sleep"):
+                with self.assertRaises(AssertionError) as exc:
+                    smoke.find_node("emulator-5580", "Download", deadline=0.001)
+        self.assertIn("Offline favorites", str(exc.exception))
+
+    def test_rejects_physical_device_diagnostics(self):
+        with patch.object(smoke.subprocess, "run") as run:
+            smoke.capture_failure("fa90cf85")
+        run.assert_not_called()
+
     def test_ignores_transient_malformed_xml(self):
         with patch.object(smoke, "adb", side_effect=["dump complete", "<hierarchy>"]):
             with self.assertRaises(RuntimeError) as error:
