@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import coil3.compose.AsyncImage
+import com.goreecloud.gifs.data.IncomingMediaPolicy
 import com.goreecloud.gifs.data.MediaAttribution
 import com.goreecloud.gifs.data.MediaItem
 import com.goreecloud.gifs.data.MediaKind
@@ -95,6 +96,30 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+        // Do not re-import the original share when Android recreates our activity.
+        if (savedInstanceState == null) receiveSharedImage(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        receiveSharedImage(intent)
+    }
+
+    private fun receiveSharedImage(incoming: Intent?) {
+        if (incoming?.action != Intent.ACTION_SEND) return
+        @Suppress("DEPRECATION")
+        val stream = incoming.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+        // Android peers may put the same single URI into ClipData.
+        val uri = stream ?: incoming.clipData?.takeIf { it.itemCount == 1 }?.getItemAt(0)?.uri
+        if (!IncomingMediaPolicy.accepts(incoming.action, incoming.type, uri?.scheme, uri?.authority)) {
+            vm.showMessage("Only a shared GIF or PNG file can be saved.")
+            return
+        }
+        val safeUri = uri ?: return
+        // Even explicit Android intents can be forged by another app: require an
+        // in-app confirmation before opening the provided content URI.
+        vm.offerSharedUri(safeUri)
     }
 
     private fun send(item: MediaItem) {
@@ -160,6 +185,9 @@ private fun GalleryScreen(
     val hasMore by viewModel.hasMore.collectAsStateWithLifecycle()
     val searchError by viewModel.searchError.collectAsStateWithLifecycle()
     val error by viewModel.message.collectAsStateWithLifecycle()
+    val lastImportedId by viewModel.lastImportedId.collectAsStateWithLifecycle()
+    val pendingSharedUri by viewModel.pendingSharedUri.collectAsStateWithLifecycle()
+    var savingSharedImage by remember { mutableStateOf(false) }
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var type by rememberSaveable {
         mutableStateOf(PickerPolicy.defaultKind(requestedMime).name)
@@ -180,6 +208,13 @@ private fun GalleryScreen(
         if (tab == 0) {
             delay(if (exploreQuery.isBlank()) 0 else 400)
             viewModel.search(exploreQuery, kind)
+        }
+    }
+    LaunchedEffect(lastImportedId) {
+        if (lastImportedId != null) {
+            tab = 1
+            savedQuery = ""
+            savedFilter = SavedKind.ALL.name
         }
     }
     LaunchedEffect(error) {
@@ -456,6 +491,44 @@ private fun GalleryScreen(
                 }
             }
         }
+    }
+    pendingSharedUri?.let { sharedUri ->
+        AlertDialog(
+            onDismissRequest = {
+                if (!savingSharedImage) viewModel.declineSharedUri()
+            },
+            title = { Text("Import shared image?") },
+            text = {
+                Text(
+                    "Copy the shared GIF or PNG into private offline favorites? " +
+                        "The file stays on this device and can be deleted from Saved."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !savingSharedImage,
+                    onClick = {
+                        savingSharedImage = true
+                        uiScope.launch {
+                            try {
+                                val imported = viewModel.acceptSharedUri(sharedUri)
+                                snackbar.showSnackbar("Imported " + imported.title + " to Saved")
+                            } catch (error: Exception) {
+                                snackbar.showSnackbar(error.message ?: "Could not import shared image.")
+                            } finally {
+                                savingSharedImage = false
+                            }
+                        }
+                    }
+                ) { Text(if (savingSharedImage) "Importing…" else "Save offline") }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = !savingSharedImage,
+                    onClick = { viewModel.declineSharedUri() }
+                ) { Text("Cancel") }
+            }
+        )
     }
     selected?.let { item ->
         ModalBottomSheet(

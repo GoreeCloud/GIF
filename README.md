@@ -11,6 +11,7 @@ A native, open-source Android gallery for finding, saving, and sharing GIFs and 
 - Native Compose discovery grid and preview sheet with light/dark GoreeCloud UI alpha token roles.
 - Offline favorites: explicitly favorited GIFs and stickers are copied to app-private storage. Saved has its own search (including creator and license) and All / GIFs / Stickers filters, independent from Explore.
 - Local import: from **Saved**, select a GIF or PNG through Android's document picker. The app validates the content and copies it directly to its private favorites; no broad storage permission or GoreeCloud upload is required.
+- Receive from other Android apps: when another app offers a GIF or PNG through **Share**, choose **GoreeCloud GIF's** and confirm **Save offline** to copy the selected image into Saved. Shared files are validated and kept on-device; ordinary JPEGs, links, multiple-image shares and unsupported types are rejected.
 - Android share sheet: share a downloaded GIF (image/gif) or sticker (image/png) into another compatible app using FileProvider and temporary URI read permission.
 - Android image picker interoperability: eligible apps using `ACTION_GET_CONTENT` can select GoreeCloud GIF's as a media source. The user deliberately selects a single compatible GIF/PNG; the app returns a temporary read-only `content://` URI.
 - Phone download: write GIFs and PNGs to Pictures/GoreeCloud GIFs through Android MediaStore.
@@ -36,7 +37,8 @@ Find the development-signed debug APK at `app/build/outputs/apk/debug/app-debug.
 3. Tap **heart** to save offline, **Share** to send media through Android's chooser, or **Download** to place the file in Pictures/GoreeCloud GIFs.
 4. Open **Saved** to access offline favorites even if search is unavailable. Use the separate Saved search or the All / GIFs / Stickers chips to quickly find what you kept.
 5. From **Saved**, tap **Import** to select a personal GIF or PNG. The file is checked, kept locally for offline use, and can be shared or downloaded from the gallery.
-6. In apps that invoke Android's compatible `ACTION_GET_CONTENT` image picker, choose **GoreeCloud GIF's**, browse or search, and tap **Use in app**. This does not install a system keyboard or extend every modern photo picker.
+6. From another Android app, share a GIF or PNG file to **GoreeCloud GIF's** to copy it into Saved, without granting broad storage access.
+7. In apps that invoke Android's compatible `ACTION_GET_CONTENT` image picker, choose **GoreeCloud GIF's**, browse or search, and tap **Use in app**. This does not install a system keyboard or extend every modern photo picker.
 
 Openverse search needs network access. Sticker *metadata search* is offline; first-time sticker image viewing, sharing and saving need network access. Sharing or downloading a previously favorited item is offline.
 

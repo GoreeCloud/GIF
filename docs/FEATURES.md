@@ -6,7 +6,7 @@
 | Sticker search | Implemented using pinned local OpenMoji metadata | Catalog coverage and search acceptance |
 | GIF preview | Implemented with Coil GIF renderer | Real-device animation and memory testing |
 | Local favorites and saved filters | Implemented with Android DataStore/private files and independent Saved search with type, creator and license filters | Restart/offline/low-storage and UI acceptance |
-| User-selected local GIF/PNG imports | SAF OpenDocument picker, 25 MiB bound, GIF/PNG signature check and app-private copy; no persistable URI grant | Provider permissions, invalid file, reinstall, storage and cross-app acceptance |
+| User-selected local GIF/PNG imports and received shares | SAF OpenDocument picker or confirmed single-image ACTION_SEND share, strict MIME/URI validation, 25 MiB bound, GIF/PNG signature check and app-private copy; no persistable grant | Provider permissions, invalid files, recreation, storage and cross-app acceptance |
 | Share to other apps | Implemented with FileProvider and ACTION_SEND | Target apps and URI grant tests |
 | Pick GIF/PNG from requesting apps | Single-item Android ACTION_GET_CONTENT activity integration with MIME validation and temporary read grant | Caller integration/device tests |
 | Download to phone | Implemented with Android MediaStore scoped storage | Android 10–current integration tests |
