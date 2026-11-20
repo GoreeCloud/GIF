@@ -7,8 +7,8 @@ object ImportPolicy {
     const val MAX_BYTES = 25L * 1024L * 1024L
 
     fun detectKind(file: File): MediaKind? = when {
-        MediaFiles.matchesMagic(file, MediaKind.GIF) -> MediaKind.GIF
-        MediaFiles.matchesMagic(file, MediaKind.STICKER) -> MediaKind.STICKER
+        MediaFiles.isValidStoredMedia(file, MediaKind.GIF) -> MediaKind.GIF
+        MediaFiles.isValidStoredMedia(file, MediaKind.STICKER) -> MediaKind.STICKER
         else -> null
     }
 

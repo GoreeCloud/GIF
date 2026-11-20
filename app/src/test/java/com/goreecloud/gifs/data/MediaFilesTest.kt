@@ -8,7 +8,7 @@ class MediaFilesTest {
     @Test fun previouslyCachedMediaMustStillMatchExpectedFormat() {
         val file = File.createTempFile("goreecloud-cached-", ".gif")
         try {
-            file.writeBytes("GIF89a00".toByteArray())
+            file.writeBytes(TestMediaHeaders.gif())
             assertTrue(MediaFiles.isValidStoredMedia(file, MediaKind.GIF))
             assertFalse(MediaFiles.isValidStoredMedia(file, MediaKind.STICKER))
             file.writeBytes("INVALID!".toByteArray())
@@ -23,9 +23,7 @@ class MediaFilesTest {
             assertFalse(MediaFiles.isValidStoredMedia(file, MediaKind.STICKER))
             file.writeBytes(byteArrayOf(0x89.toByte(), 0x50, 0x4e, 0x47))
             assertFalse(MediaFiles.isValidStoredMedia(file, MediaKind.STICKER))
-            file.writeBytes(byteArrayOf(
-                0x89.toByte(), 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a
-            ))
+            file.writeBytes(TestMediaHeaders.png())
             assertTrue(MediaFiles.isValidStoredMedia(file, MediaKind.STICKER))
         } finally { file.delete() }
     }

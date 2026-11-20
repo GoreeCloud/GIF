@@ -201,7 +201,8 @@ class MediaFiles(private val context: Context, private val client: OkHttpClient)
     companion object {
         /** Rejects empty, oversized or incorrectly typed app-private media. */
         fun isValidStoredMedia(file: File, kind: MediaKind): Boolean =
-            file.isFile && file.length() in 8..ImportPolicy.MAX_BYTES && matchesMagic(file, kind)
+            file.isFile && file.length() in 13..ImportPolicy.MAX_BYTES &&
+                matchesMagic(file, kind) && MediaHeaders.plausible(file, kind)
 
         fun matchesMagic(file: File, kind: MediaKind): Boolean {
             if (!file.isFile || file.length() < 8) return false

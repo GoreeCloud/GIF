@@ -21,11 +21,9 @@ class ImportPolicyTest {
     @Test fun importedMediaMustHaveGifOrPngSignature() {
         val file = File.createTempFile("goreecloud-import-", ".bin")
         try {
-            file.writeBytes("GIF89a00".toByteArray(Charsets.US_ASCII))
+            file.writeBytes(TestMediaHeaders.gif())
             assertEquals(MediaKind.GIF, ImportPolicy.detectKind(file))
-            file.writeBytes(byteArrayOf(
-                0x89.toByte(), 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a
-            ))
+            file.writeBytes(TestMediaHeaders.png())
             assertEquals(MediaKind.STICKER, ImportPolicy.detectKind(file))
             file.writeBytes("<script>".toByteArray(Charsets.US_ASCII))
             assertNull(ImportPolicy.detectKind(file))
