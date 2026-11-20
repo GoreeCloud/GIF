@@ -6,7 +6,7 @@ This project is a development alpha, not a production-hardened service. Please r
 - No account access, permissions to contacts or files, telemetry SDK, background service or embedded browser.
 - HTTPS-only external requests with DNS answers screened for loopback, private, link-local and reserved destinations. Downloads reject redirects; preview requests permit only same-scheme HTTPS redirects to publicly resolving hosts.
 - Refuse loopback/private/link-local URL targets, non-GIF/PNG payloads and downloads larger than 25 MiB.
-- Local imports use Android's explicit system document picker, validate `content://` provenance and GIF/PNG magic bytes, enforce the 25 MiB limit, copy only to app-private files and roll back on DataStore failure. No broad storage access or persistent document-provider grant is requested.
+- Local imports use Android's explicit system document picker or a single-image Android Share target with an additional in-app confirmation; imported shares restrict GIF/PNG MIME declarations and `content://` provenance. Both paths validate `content://` provenance and GIF/PNG magic bytes, enforce the 25 MiB limit, copy only to app-private files and roll back on DataStore failure. No broad storage access or persistent document-provider grant is requested.
 - App-private favorites; explicitly permissioned temporary Android content URI sharing. `ACTION_GET_CONTENT` responses require an explicit item choice, restrict GIF/PNG MIME types and grant only temporary read access to the selected item.
 - Gradle and dependency versions pinned; source review and CI remain ongoing.
 
