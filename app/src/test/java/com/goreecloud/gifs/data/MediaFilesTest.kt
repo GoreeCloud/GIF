@@ -30,6 +30,17 @@ class MediaFilesTest {
         } finally { file.delete() }
     }
 
+    @Test fun oversizedStoredMediaIsRejectedWithoutReadingTheWholeFile() {
+        val file = File.createTempFile("goreecloud-oversize-", ".gif")
+        try {
+            java.io.RandomAccessFile(file, "rw").use { output ->
+                output.write("GIF89a00".toByteArray(Charsets.US_ASCII))
+                output.setLength(ImportPolicy.MAX_BYTES + 1L)
+            }
+            assertFalse(MediaFiles.isValidStoredMedia(file, MediaKind.GIF))
+        } finally { file.delete() }
+    }
+
     @Test fun gifSignatureIsChecked() {
         val file = File.createTempFile("goreecloud", ".gif")
         try {
