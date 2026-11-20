@@ -3,7 +3,7 @@
 | Feature | Source status | Acceptance remaining |
 | --- | --- | --- |
 | GIF search and pagination | Implemented via anonymous Openverse JSON adapter (20/page); status errors show retry | Device/network and load-more acceptance |
-| Sticker search with local pagination | Pinned local OpenMoji metadata, multi-term filtering and bounded 60-item pages with Load more; no network requests for sticker search | Catalog coverage and large-result-set UI acceptance |
+| Sticker search with local pagination | Pinned local OpenMoji metadata, multi-term filtering and bounded 60-item pages with Load more and consistent empty-query pagination; no network requests for sticker search | Catalog coverage and large-result-set UI acceptance |
 | GIF preview | Implemented with Coil GIF renderer | Real-device animation and memory testing |
 | Local favorites and saved filters | Implemented with Android DataStore/private files and independent Saved search, type filters and Newest/Oldest/A–Z ordering | Restart/offline/low-storage and UI acceptance |
 | User-selected local GIF/PNG imports and received shares | SAF OpenDocument picker or confirmed single-image ACTION_SEND share, strict MIME/URI validation, 25 MiB bound, GIF/PNG signature, dimensions and PNG IHDR CRC checks, and app-private copy; no persistable grant | Provider permissions, invalid files, recreation, storage and cross-app acceptance |
@@ -18,7 +18,7 @@
 | Sticker pack installation into third-party keyboards | Not implemented | App-specific APIs / permissions |
 | Cloud synchronization | Not implemented | Consent, encryption, identity and Mesh |
 | Short-lived CI debug APK artifact | Implemented in workflow source; uploads only after tests/lint/build pass, with SHA-256 checksum | GitHub Actions artifact and installation verification |
-| Manual Android emulator smoke workflow | Six-step Android 36 run passed on reviewed branches and protected-main commits `acd9671` and `ee3c095`, with host-side tests | Revalidation after later changes, direct pagination interaction, physical devices and external app interoperability |
+| Manual Android emulator smoke workflow | Six-step Android 36 workflow has passed on reviewed branches and protected-main revisions; eight-step extended mode passed on corrected branch run #44658719227 (offline Saved restart and native Load more stickers) | Repeat extended run on protected main and separately validate physical devices and third-party interoperability |
 | Stable signed APK | Not implemented | CI, release and device acceptance |
 
 Passing source static checks alone does not establish platform acceptance.

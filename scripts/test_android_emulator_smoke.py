@@ -59,6 +59,79 @@ class SmokeHarnessTest(unittest.TestCase):
             with self.assertRaises(AssertionError):
                 smoke.require_mediastore_download("emulator-5580")
 
+    def test_scroll_finds_native_load_more_footer(self):
+        footer = ET.Element("node", {
+            "text": "Load more stickers",
+            "content-desc": "",
+            "bounds": "[10,800][400,900]",
+        })
+        with patch.object(smoke, "adb", return_value="Physical size: 1080x2340") as adb:
+            with patch.object(smoke, "nodes", side_effect=[[], [footer]]):
+                with patch.object(smoke.time, "sleep"):
+                    found = smoke.find_node_with_scrolling(
+                        "emulator-5580", "Load more stickers", max_swipes=2
+                    )
+        self.assertIs(found, footer)
+        self.assertTrue(
+            any(call.args[1:4] == ("shell", "input", "swipe") for call in adb.call_args_list)
+        )
+
+    def test_scroll_does_not_tap_offscreen_lazy_grid_elements(self):
+        offscreen = ET.Element("node", {
+            "text": "Load more stickers",
+            "content-desc": "",
+            "bounds": "[10,2500][400,2600]",
+        })
+        onscreen = ET.Element("node", {
+            "text": "Load more stickers",
+            "content-desc": "",
+            "bounds": "[10,800][400,900]",
+        })
+        with patch.object(smoke, "adb", return_value="Physical size: 1080x2340") as adb:
+            with patch.object(smoke, "nodes", side_effect=[[offscreen], [onscreen]]):
+                with patch.object(smoke.time, "sleep"):
+                    found = smoke.find_node_with_scrolling(
+                        "emulator-5580", "Load more stickers", max_swipes=2
+                    )
+        self.assertIs(found, onscreen)
+        self.assertTrue(
+            any(call.args[1:4] == ("shell", "input", "swipe") for call in adb.call_args_list)
+        )
+
+    def test_scroll_does_not_run_unbounded_or_touch_other_devices(self):
+        with patch.object(smoke, "adb", return_value="Physical size: 1080x2340") as adb:
+            with patch.object(smoke, "nodes", return_value=[]):
+                with patch.object(smoke.time, "sleep"):
+                    with self.assertRaises(AssertionError):
+                        smoke.find_node_with_scrolling(
+                            "emulator-5580", "Load more stickers", max_swipes=2
+                        )
+        swipes = [
+            call for call in adb.call_args_list
+            if call.args[1:4] == ("shell", "input", "swipe")
+        ]
+        self.assertEqual(2, len(swipes))
+        self.assertTrue(all(call.args[0] == "emulator-5580" for call in swipes))
+
+    def test_offline_restart_restores_radios_when_ui_fails(self):
+        calls = []
+
+        def fake_adb(serial, *args, **kwargs):
+            self.assertEqual(serial, "emulator-5580")
+            calls.append(args)
+            if args[:3] == ("shell", "run-as", smoke.PACKAGE):
+                return "favorite.png"
+            return ""
+
+        with patch.object(smoke, "adb", side_effect=fake_adb):
+            with patch.object(smoke, "find_node", side_effect=AssertionError("not ready")):
+                with self.assertRaises(AssertionError):
+                    smoke.verify_offline_restart("emulator-5580")
+        self.assertIn(("shell", "svc", "wifi", "disable"), calls)
+        self.assertIn(("shell", "svc", "data", "disable"), calls)
+        self.assertIn(("shell", "svc", "wifi", "enable"), calls)
+        self.assertIn(("shell", "svc", "data", "enable"), calls)
+
     def test_ignores_transient_malformed_xml(self):
         with patch.object(smoke, "adb", side_effect=["dump complete", "<hierarchy>"]):
             with self.assertRaises(RuntimeError) as error:

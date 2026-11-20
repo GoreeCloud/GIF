@@ -124,6 +124,75 @@ def require_file(serial):
         raise AssertionError(f"No offline favorite PNG in app-private files: {listing[:200]}")
 
 
+def find_node_with_scrolling(serial, phrase, max_swipes=45):
+    """Locate a LazyGrid footer using on-screen swipes; bound work on slow VMs."""
+    width_height = adb(serial, "shell", "wm", "size", timeout=10)
+    sizes = re.findall(r"(\d+)x(\d+)", width_height)
+    width, height = map(int, sizes[-1]) if sizes else (1080, 1920)
+    start_y = int(height * 0.83)
+    end_y = int(height * 0.39)
+    x = width // 2
+    for step in range(max_swipes + 1):
+        try:
+            for node in nodes(serial):
+                label = (node.get("text", "") + " " + node.get("content-desc", "")).strip()
+                if phrase.lower() not in label.lower():
+                    continue
+                bounds = BOUNDS.fullmatch(node.get("bounds", ""))
+                if bounds is None:
+                    continue
+                left, top, right, bottom = map(int, bounds.groups())
+                # Accessibility trees can expose off-screen LazyGrid children.
+                # Never tap coordinates hidden by status or navigation chrome.
+                visible = (
+                    0 <= left < right <= width and
+                    int(height * 0.25) <= top < bottom <= int(height * 0.9)
+                )
+                if visible:
+                    print(
+                        f"QA_SCROLL_TARGET: {phrase!r} bounds={node.get('bounds')} "
+                        f"clickable={node.get('clickable')} swipes={step}",
+                        flush=True
+                    )
+                    return node
+        except (RuntimeError, subprocess.TimeoutExpired, ET.ParseError):
+            pass
+        if step < max_swipes:
+            adb(serial, "shell", "input", "swipe", x, start_y, x, end_y, 90)
+            time.sleep(0.15)
+    raise AssertionError(f"Could not scroll to a visible {phrase!r} within {max_swipes} swipes")
+
+
+def verify_offline_restart(serial):
+    """Save was already confirmed. Reopen while offline and verify persistence."""
+    before = adb(serial, "shell", "run-as", PACKAGE, "ls", "files/favorites")
+    adb(serial, "shell", "am", "force-stop", PACKAGE)
+    try:
+        adb(serial, "shell", "svc", "wifi", "disable")
+        adb(serial, "shell", "svc", "data", "disable")
+        adb(serial, "shell", "am", "start", "-n", PACKAGE + "/.ui.MainActivity")
+        find_node(serial, "Saved (1)", deadline=70)
+        tap(serial, find_node(serial, "Saved (1)", exact=True, deadline=25))
+        find_node(serial, "Offline favorites", deadline=30)
+        find_node(serial, "More options for", deadline=30)
+        after = adb(serial, "shell", "run-as", PACKAGE, "ls", "files/favorites")
+        if before != after or not after.strip():
+            raise AssertionError("Offline saved file changed across restart")
+    finally:
+        # Return the isolated emulator to its previous default connectivity.
+        adb(serial, "shell", "svc", "wifi", "enable")
+        adb(serial, "shell", "svc", "data", "enable")
+
+
+def verify_sticker_pagination(serial):
+    """Check the actual native Load more control, not only pagination unit tests."""
+    tap(serial, find_node(serial, "Explore", exact=True, deadline=30))
+    tap(serial, find_node(serial, "Stickers", exact=True, deadline=30))
+    find_node(serial, "60 items", deadline=70)
+    tap(serial, find_node_with_scrolling(serial, "Load more stickers"))
+    find_node(serial, "120 items", deadline=65)
+
+
 def require_mediastore_download(serial):
     """Check the actual Android MediaStore row, not just a transient UI toast."""
     listing = adb(
@@ -150,6 +219,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--serial", default="emulator-5554")
     parser.add_argument("--apk", required=True)
+    parser.add_argument(
+        "--extended", action="store_true",
+        help="Also verify offline favorite restart and native sticker paging"
+    )
     args = parser.parse_args()
     if not args.serial.startswith("emulator-"):
         parser.error("Only an emulator serial is allowed")
@@ -182,6 +255,13 @@ def main():
     find_node(args.serial, "View source and licensing", deadline=30)
     print("6/6 Source/attribution action present", flush=True)
     print("SMOKE_SUCCESS: Android emulator core workflow verified", flush=True)
+    if args.extended:
+        adb(args.serial, "shell", "input", "keyevent", "KEYCODE_BACK")
+        verify_offline_restart(args.serial)
+        print("7/8 Saved sticker survives offline app restart", flush=True)
+        verify_sticker_pagination(args.serial)
+        print("8/8 Native sticker Load more updates item count", flush=True)
+        print("EXTENDED_SMOKE_SUCCESS: offline restart and sticker pagination verified", flush=True)
 
 
 if __name__ == "__main__":
