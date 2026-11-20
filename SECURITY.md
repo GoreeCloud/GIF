@@ -8,6 +8,7 @@ This project is a development alpha, not a production-hardened service. Please r
 - Refuse loopback/private/link-local URL targets, non-GIF/PNG payloads and downloads larger than 25 MiB.
 - Local imports use Android's explicit system document picker or a single-image Android Share target with an additional in-app confirmation; imported shares restrict GIF/PNG MIME declarations and `content://` provenance. Both paths validate `content://` provenance and GIF/PNG magic bytes, enforce the 25 MiB limit, copy only to app-private files and roll back on DataStore failure. No broad storage access or persistent document-provider grant is requested.
 - Media revalidation before sharing/exporting: app-private favorites that fail GIF/PNG signature or size validation produce an actionable error and are never silently deleted. Invalid temporary cache is replaced; only files in cache/shares are eligible for quota eviction.
+- Persisted local favorite filenames must exactly match the SHA-256-derived identifier and GIF/PNG extension expected for that media record; malformed paths cannot direct previews outside the private favorites directory.
 - App-private favorites; explicitly permissioned temporary Android content URI sharing. `ACTION_GET_CONTENT` responses require an explicit item choice, restrict GIF/PNG MIME types and grant only temporary read access to the selected item.
 - Gradle and dependency versions pinned; source review and CI remain ongoing.
 

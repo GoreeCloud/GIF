@@ -28,16 +28,20 @@ data class MediaItem(
 
     companion object {
         fun fromJson(j: JSONObject): MediaItem? = runCatching {
+            val id = j.getString("id")
+            val kind = MediaKind.valueOf(j.getString("kind"))
             MediaItem(
-                id = j.getString("id"),
+                id = id,
                 title = j.getString("title"),
-                kind = MediaKind.valueOf(j.getString("kind")),
+                kind = kind,
                 url = j.getString("url"),
                 thumbnail = j.getString("thumbnail"),
                 credit = j.optString("credit"),
                 sourceUrl = j.optString("sourceUrl"),
                 license = j.optString("license"),
-                localFile = j.optString("localFile").ifBlank { null }
+                localFile = j.optString("localFile").takeIf {
+                    it.isNotBlank() && SavedFileNames.matches(id, kind, it)
+                }
             )
         }.getOrNull()
     }
