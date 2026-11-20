@@ -3,7 +3,7 @@
 | Feature | Source status | Acceptance remaining |
 | --- | --- | --- |
 | GIF search and pagination | Implemented via anonymous Openverse JSON adapter (20/page); status errors show retry | Device/network and load-more acceptance |
-| Sticker search | Implemented using pinned local OpenMoji metadata | Catalog coverage and search acceptance |
+| Sticker search with local pagination | Pinned local OpenMoji metadata, multi-term filtering and bounded 60-item pages with Load more; no network requests for sticker search | Catalog coverage and large-result-set UI acceptance |
 | GIF preview | Implemented with Coil GIF renderer | Real-device animation and memory testing |
 | Local favorites and saved filters | Implemented with Android DataStore/private files and independent Saved search with type, creator and license filters | Restart/offline/low-storage and UI acceptance |
 | User-selected local GIF/PNG imports and received shares | SAF OpenDocument picker or confirmed single-image ACTION_SEND share, strict MIME/URI validation, 25 MiB bound, GIF/PNG signature check and app-private copy; no persistable grant | Provider permissions, invalid files, recreation, storage and cross-app acceptance |

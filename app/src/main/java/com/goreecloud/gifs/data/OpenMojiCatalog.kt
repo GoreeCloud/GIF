@@ -16,7 +16,10 @@ class OpenMojiCatalog(private val context: Context) {
     private val lock = Mutex()
     private var catalog: List<Entry>? = null
 
-    suspend fun search(query: String): List<MediaItem> = withContext(Dispatchers.IO) {
+    suspend fun search(
+        query: String,
+        page: Int = 1
+    ): StickerSearchPage<MediaItem> = withContext(Dispatchers.IO) {
         val entries = lock.withLock {
             catalog ?: load().also { catalog = it }
         }
@@ -24,7 +27,9 @@ class OpenMojiCatalog(private val context: Context) {
         val filtered = if (terms.isEmpty()) entries else entries.filter { entry ->
             terms.all { entry.terms.contains(it) }
         }
-        filtered.take(100).map { it.item }
+        StickerPagination.page(filtered, page).let { slice ->
+            StickerSearchPage(slice.items.map { it.item }, slice.page, slice.hasMore)
+        }
     }
 
     private fun load(): List<Entry> {

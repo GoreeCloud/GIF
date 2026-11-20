@@ -71,7 +71,12 @@ class GalleryViewModel(app: Application) : AndroidViewModel(app) {
                         currentPage = page.page
                         hasMore.value = page.hasMore
                     }
-                    MediaKind.STICKER -> results.value = stickers.search(query)
+                    MediaKind.STICKER -> {
+                        val page = stickers.search(query)
+                        results.value = page.items
+                        currentPage = page.page
+                        hasMore.value = page.hasMore
+                    }
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -85,20 +90,29 @@ class GalleryViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun loadMore() {
-        if (activeKind != MediaKind.GIF || loading.value || loadingMore.value || !hasMore.value) return
+        if (loading.value || loadingMore.value || !hasMore.value) return
         val query = activeQuery
         val nextPage = currentPage + 1
         loadMoreJob = viewModelScope.launch {
             loadingMore.value = true
             try {
-                val next = gifSource.searchGifs(query, nextPage)
-                results.value = (results.value + next.items).distinctBy { it.id }
-                currentPage = next.page
-                hasMore.value = next.hasMore
+                val next = when (activeKind) {
+                    MediaKind.GIF -> {
+                        val result = gifSource.searchGifs(query, nextPage)
+                        Triple(result.items, result.page, result.hasMore)
+                    }
+                    MediaKind.STICKER -> {
+                        val result = stickers.search(query, nextPage)
+                        Triple(result.items, result.page, result.hasMore)
+                    }
+                }
+                results.value = (results.value + next.first).distinctBy { it.id }
+                currentPage = next.second
+                hasMore.value = next.third
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                message.value = e.message ?: "Unable to load more GIFs."
+                message.value = e.message ?: "Unable to load more media."
             } finally {
                 loadingMore.value = false
             }
