@@ -8,8 +8,8 @@
 - Initial automated tests, build workflows and security bounds.
 
 ## Next development priorities (not implemented)
-1. Re-run Android emulator acceptance after the download-feedback visibility fix, validate the MediaStore-exported PNG and source action; then verify physical-device behavior, share targets and downloaded file integrity.
-2. Improve network retry/backoff, thumbnail disk-cache limits and search relevance; pagination is implemented in development source.
+1. Verify the six-step emulator acceptance on the protected main branch and independently verify physical-device behavior, third-party share targets and downloaded file integrity.
+2. Improve network retry/backoff, Coil thumbnail disk-cache limits and search relevance; temporary share-cache quota and GIF pagination are implemented in development source.
 3. Verify clipboard attribution behavior on supported devices; improve content rights guidance and media-specific license notices.
 4. Extend basic Saved type filters with sticker packs, collections, search refinements, batch backup/export and media organization.
 5. Audit inclusive design, screen reader controls, RTL, tablet layouts and automated image UI tests.
