@@ -5,7 +5,7 @@
 ## CI and acceptance scope
 
 - Required `Android` workflow: Android SDK 37 compile, unit tests, Android lint, debug APK, SHA-256 verification and seven-day artifact.
-- Manual `Android emulator smoke (manual)` workflow: isolated Android 36 x86_64 emulator with shell-only ADB. The test does not target the connected physical phone.
+- Manual `Android emulator smoke (manual)` workflow: isolated Android 36 x86_64 emulator with shell-only ADB. Default tests the established six core steps. The optional **extended** workflow input additionally exercises an app force-stop/relaunch while Wi-Fi and mobile data are disabled, confirms the offline saved media remains present, scrolls to the sticker pagination footer, and checks the item count rises from 60 to 120. Extended mode is not accepted until a live run passes. The test does not target a connected physical phone.
 - Host-side Python tests run on every `Android` CI check to exercise the accessibility-UI retry and coordinate logic without booting a device.
 - Passing unit tests or a booted emulator **does not** prove actual on-device downloads, animated GIF behavior, other-app integration, or accessibility compliance.
 

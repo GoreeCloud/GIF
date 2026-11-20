@@ -18,7 +18,7 @@
 | Sticker pack installation into third-party keyboards | Not implemented | App-specific APIs / permissions |
 | Cloud synchronization | Not implemented | Consent, encryption, identity and Mesh |
 | Short-lived CI debug APK artifact | Implemented in workflow source; uploads only after tests/lint/build pass, with SHA-256 checksum | GitHub Actions artifact and installation verification |
-| Manual Android emulator smoke workflow | Six-step Android 36 run passed on reviewed branches and protected-main commits `acd9671` and `ee3c095`, with host-side tests | Revalidation after later changes, direct pagination interaction, physical devices and external app interoperability |
+| Manual Android emulator smoke workflow | Six-step Android 36 workflow has passed on reviewed branches and protected-main revisions; optional extended mode now exercises offline Saved persistence after force-stop and native Load more stickers | Execute extended cloud run and separately validate physical devices and third-party interoperability |
 | Stable signed APK | Not implemented | CI, release and device acceptance |
 
 Passing source static checks alone does not establish platform acceptance.
