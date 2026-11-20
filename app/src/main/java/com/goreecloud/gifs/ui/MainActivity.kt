@@ -112,9 +112,17 @@ class MainActivity : ComponentActivity() {
         if (incoming?.action != Intent.ACTION_SEND) return
         @Suppress("DEPRECATION")
         val stream = incoming.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
-        // Android peers may put the same single URI into ClipData.
-        val uri = stream ?: incoming.clipData?.takeIf { it.itemCount == 1 }?.getItemAt(0)?.uri
-        if (!IncomingMediaPolicy.accepts(incoming.action, incoming.type, uri?.scheme, uri?.authority)) {
+        // Some senders include both EXTRA_STREAM and ClipData. Decline
+        // multiple-item or conflicting sources rather than silently taking one.
+        val clipCount = incoming.clipData?.itemCount ?: 0
+        val clipUri = incoming.clipData?.takeIf { it.itemCount == 1 }?.getItemAt(0)?.uri
+        val uri = stream ?: clipUri
+        val sourcesAgree = stream == null || clipUri == null || stream == clipUri
+        if (!IncomingMediaPolicy.accepts(
+                incoming.action, incoming.type, uri?.scheme, uri?.authority,
+                clipItemCount = clipCount, uriSourcesAgree = sourcesAgree
+            )
+        ) {
             vm.showMessage("Only a shared GIF or PNG file can be saved.")
             return
         }

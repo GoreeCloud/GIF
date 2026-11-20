@@ -7,8 +7,16 @@ package com.goreecloud.gifs.data
 object IncomingMediaPolicy {
     const val ACTION_SEND = "android.intent.action.SEND"
 
-    fun accepts(action: String?, mime: String?, scheme: String?, authority: String?): Boolean =
+    fun accepts(
+        action: String?,
+        mime: String?,
+        scheme: String?,
+        authority: String?,
+        clipItemCount: Int = 0,
+        uriSourcesAgree: Boolean = true
+    ): Boolean =
         action == ACTION_SEND &&
             mime?.trim()?.lowercase() in setOf("image/gif", "image/png") &&
-            scheme == "content" && !authority.isNullOrBlank()
+            scheme == "content" && !authority.isNullOrBlank() &&
+            clipItemCount in 0..1 && uriSourcesAgree
 }
