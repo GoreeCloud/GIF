@@ -8,7 +8,7 @@
 - Initial automated tests, build workflows and security bounds.
 
 ## Next development priorities (not implemented)
-1. Verify the six-step emulator acceptance on the protected main branch and independently verify physical-device behavior, third-party share targets and downloaded file integrity.
+1. Extend the passing six-step protected-main emulator acceptance to test local sticker pagination, incoming/outgoing third-party sharing, picker callbacks and imported-media safety; independently verify physical-device behavior and downloaded file integrity.
 2. Improve network retry/backoff, Coil thumbnail disk-cache limits and search relevance; temporary share-cache quota and GIF/sticker pagination are implemented in development source.
 3. Verify clipboard attribution behavior on supported devices; improve content rights guidance and media-specific license notices.
 4. Extend basic Saved type filters with sticker packs, collections, search refinements, batch backup/export and media organization.
