@@ -9,7 +9,7 @@
 | User-selected local GIF/PNG imports and received shares | SAF OpenDocument picker or confirmed single-image ACTION_SEND share, strict MIME/URI validation, 25 MiB bound, GIF/PNG signature check and app-private copy; no persistable grant | Provider permissions, invalid files, recreation, storage and cross-app acceptance |
 | Share to other apps | Implemented with FileProvider and ACTION_SEND | Target apps and URI grant tests |
 | Pick GIF/PNG from requesting apps | Single-item Android ACTION_GET_CONTENT activity integration with MIME validation and temporary read grant | Caller integration/device tests |
-| Download to phone | Implemented with Android MediaStore scoped storage | Android 10–current integration tests |
+| Download to phone | Implemented with Android MediaStore scoped storage, visible snackbar after detail dismissal, and automatic MediaStore row checks in manual emulator acceptance | Android 10–current integration acceptance |
 | Attribution/source and copyable credit | Implemented in detail sheet; formats creator, license and safe source URL for clipboard | Attribution usability and device review |
 | Public DNS and HTTPS media hardening | Implemented in source with address validation, redirect separation and local unit tests | Real-network, DNS64 and device regression testing |
 | Native appearance and media detail actions | Jetpack Compose, verified GC UI alpha colors; compact, scrollable detail sheet prioritizes Share/Download above preview | Small-screen/large-text emulator acceptance and accessibility audit |

@@ -48,6 +48,17 @@ class SmokeHarnessTest(unittest.TestCase):
             smoke.capture_failure("fa90cf85")
         run.assert_not_called()
 
+    def test_download_requires_real_mediastore_png_row(self):
+        response = (
+            "Row: 0 _display_name=grinning-face-a96f.png, mime_type=image/png, "
+            "relative_path=Pictures/GoreeCloud GIFs/\n"
+        )
+        with patch.object(smoke, "adb", return_value=response):
+            self.assertIn("image/png", smoke.require_mediastore_download("emulator-5580"))
+        with patch.object(smoke, "adb", return_value="Row: 0 mime_type=image/jpeg"):
+            with self.assertRaises(AssertionError):
+                smoke.require_mediastore_download("emulator-5580")
+
     def test_ignores_transient_malformed_xml(self):
         with patch.object(smoke, "adb", side_effect=["dump complete", "<hierarchy>"]):
             with self.assertRaises(RuntimeError) as error:

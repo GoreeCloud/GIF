@@ -124,6 +124,28 @@ def require_file(serial):
         raise AssertionError(f"No offline favorite PNG in app-private files: {listing[:200]}")
 
 
+def require_mediastore_download(serial):
+    """Check the actual Android MediaStore row, not just a transient UI toast."""
+    listing = adb(
+        serial, "shell", "content", "query",
+        "--uri", "content://media/external/images/media",
+        "--projection", "_display_name:mime_type:relative_path",
+        timeout=30,
+    )
+    rows = listing.splitlines()
+    accepted = [
+        row for row in rows
+        if "relative_path=Pictures/GoreeCloud GIFs/" in row
+        and "mime_type=image/png" in row
+        and ".png" in row
+    ]
+    if not accepted:
+        raise AssertionError(
+            "Android MediaStore has no exported GIFs gallery PNG: " + listing[:500]
+        )
+    return accepted[0]
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--serial", default="emulator-5554")
@@ -153,8 +175,11 @@ def main():
     print("4/6 Offline favorites and media detail verified", flush=True)
     tap(args.serial, find_node(args.serial, "Download", exact=True))
     find_node(args.serial, "Saved to Pictures", deadline=60)
+    require_mediastore_download(args.serial)
     print("5/6 MediaStore phone download confirmed", flush=True)
-    find_node(args.serial, "View source and licensing", deadline=20)
+    # The sheet closes on successful export; inspect item actions again.
+    tap(args.serial, find_node(args.serial, "More options for", deadline=30))
+    find_node(args.serial, "View source and licensing", deadline=30)
     print("6/6 Source/attribution action present", flush=True)
     print("SMOKE_SUCCESS: Android emulator core workflow verified", flush=True)
 
