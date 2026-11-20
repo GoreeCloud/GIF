@@ -1,6 +1,6 @@
 # GoreeCloud GIF's — Android acceptance evidence
 
-**Status:** The six-step Android 36 cloud-emulator acceptance **passed on the reviewed download-feedback branch and on protected `main`** (run #44648142401, commit `acd9671`). The latest cache-quota merge was separately validated by Android CI; its full emulator retest remains open. No physical-phone installation, Stable release, or production deployment is asserted.
+**Status:** The six-step Android 36 cloud-emulator acceptance **passed on multiple protected-main revisions**, most recently run #44652980425 at commit `ee3c095` (after the share-cache quota and sticker-pagination changes). The later saved-file path hardening passed Android CI, but its emulator regression remains a separate gate. No physical-phone installation, Stable release, or production deployment is asserted.
 
 ## CI and acceptance scope
 
@@ -9,7 +9,7 @@
 - Host-side Python tests run on every `Android` CI check to exercise the accessibility-UI retry and coordinate logic without booting a device.
 - Passing unit tests or a booted emulator **does not** prove actual on-device downloads, animated GIF behavior, other-app integration, or accessibility compliance.
 
-## Initial independent cloud-emulator runs
+## Independent cloud-emulator runs
 
 | Run | Observed result | Follow-up |
 | --- | --- | --- |
@@ -22,12 +22,15 @@
 | [44646285317](https://github.com/GoreeCloud/GIF/actions/runs/44646285317) | **SUCCESS** on reviewed branch commit `2cc9fe0`: all six milestones logged, including app launch, sticker discovery, private offline favorite, reachable media sheet, a PNG MediaStore row and source/attribution action | Confirm the same workflow after merge and complete physical/third-party acceptance |
 | [44647133548](https://github.com/GoreeCloud/GIF/actions/runs/44647133548) | Protected-main rerun failed **before app startup**: emulator UI displayed `System UI isn't responding` during startup | Rerun without conflating this system-component ANR with an app regression; inspect runner resources if repeated |
 | [44648142401](https://github.com/GoreeCloud/GIF/actions/runs/44648142401) | **SUCCESS on protected main**, commit `acd9671`: all six milestones logged, including real private sticker favorite and MediaStore PNG row verification | Keep regression checks and repeat after later application/storage changes |
+| [44650846467](https://github.com/GoreeCloud/GIF/actions/runs/44650846467) | **SUCCESS on media-revalidation feature branch**, commit `6cf51b6`; the full existing six-step workflow passed | New cached-media rejection paths were unit-tested but malformed-file behavior is not separately exercised by the emulator |
+| [44650841153](https://github.com/GoreeCloud/GIF/actions/runs/44650841153) | Sticker-pagination branch emulator job failed **during Gradle dependency resolution**, before launch | Do not classify as a UI regression; repeat after merge |
+| [44652980425](https://github.com/GoreeCloud/GIF/actions/runs/44652980425) | **SUCCESS on protected main**, commit `ee3c095`: all six milestones including sticker save, private storage, MediaStore PNG export and attribution | Includes merged sticker pagination and cache quota; the actual 'Load more stickers' interaction is not covered by this script |
 
 These results establish a complete branch-level and protected-main emulator pass at the specified revisions, **not** acceptance on physical devices. The PNG MediaStore row check proves a published entry, not byte-for-byte image identity.
 
 ## Exit criteria
 
-1. **Verified on commit `acd9671`:** a manual protected-main workflow completed all six smoke milestones; repeat after material changes to app storage and sharing.
+1. **Verified through protected-main commit `ee3c095`:** the manual workflow completed all six smoke milestones; repeat after later changes and extend it to pagination, imports and third-party picker/share journeys.
 2. The Saved sticker and downloaded PNG remain usable without network connectivity, with local-file and MediaStore evidence.
 3. Native share-sheet and `ACTION_GET_CONTENT` consumers receive MIME-correct read-only URIs on representative Android versions.
 4. Animated GIF preview, accessibility, resource use, storage limits and attributions receive human/device review.
