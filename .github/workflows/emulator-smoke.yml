@@ -50,11 +50,14 @@ jobs:
           EMULATOR_PID=$!
           trap 'adb -s emulator-5580 emu kill >/dev/null 2>&1 || true; kill "$EMULATOR_PID" >/dev/null 2>&1 || true' EXIT
           python3 scripts/android-emulator-smoke.py --serial emulator-5580 --apk app/build/outputs/apk/debug/app-debug.apk
-      - name: Upload emulator log on failure
+      - name: Upload isolated emulator diagnostics on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: emulator-startup-log
-          path: ${{ runner.temp }}/gif-emulator.log
+          name: emulator-qa-diagnostics
+          path: |
+            ${{ runner.temp }}/gif-emulator.log
+            ${{ runner.temp }}/gif-smoke-failure.png
+            ${{ runner.temp }}/gif-smoke-hierarchy.xml
           if-no-files-found: ignore
           retention-days: 3
