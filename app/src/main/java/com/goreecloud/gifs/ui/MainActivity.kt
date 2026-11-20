@@ -11,6 +11,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -432,8 +434,11 @@ private fun GalleryScreen(
         }
     }
     selected?.let { item ->
-        ModalBottomSheet(onDismissRequest = { selected = null },
-            containerColor = MaterialTheme.colorScheme.surface) {
+        ModalBottomSheet(
+            onDismissRequest = { selected = null },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
             MediaDetail(
                 item = item,
                 isFavorite = item.id in favoriteIds,
@@ -526,22 +531,26 @@ private fun MediaDetail(
     onSource: () -> Unit,
     onCopyAttribution: () -> Unit
 ) {
+    // Put primary actions first, before a potentially tall animated preview.
+    // Scrollable content keeps secondary actions reachable on small screens,
+    // with large accessibility text and in landscape orientation.
     Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).navigationBarsPadding()
-            .padding(bottom = 24.dp),
+        modifier = Modifier.fillMaxWidth()
+            .heightIn(max = 640.dp)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp)
+            .navigationBarsPadding()
+            .padding(bottom = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        MediaPreview(item, Modifier.fillMaxWidth().heightIn(min = 180.dp, max = 280.dp)
-            .clip(RoundedCornerShape(18.dp)), animate = true)
-        Spacer(Modifier.height(14.dp))
-        Text(item.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(6.dp))
-        Text(item.license, style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary)
-        Text(item.credit, style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 3,
-            overflow = TextOverflow.Ellipsis)
-        Spacer(Modifier.height(18.dp))
+        Text(
+            item.title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+        Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = onShare, enabled = !busy, modifier = Modifier.weight(1f)) {
                 Icon(
@@ -557,6 +566,26 @@ private fun MediaDetail(
                 Spacer(Modifier.width(6.dp)); Text("Download")
             }
         }
+        Spacer(Modifier.height(16.dp))
+        MediaPreview(
+            item,
+            Modifier.fillMaxWidth().heightIn(min = 140.dp, max = 185.dp)
+                .clip(RoundedCornerShape(18.dp)),
+            animate = true
+        )
+        Spacer(Modifier.height(12.dp))
+        Text(
+            item.license,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            item.credit,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis
+        )
         TextButton(onClick = onFavorite, enabled = !busy) {
             Icon(if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                 null, Modifier.size(18.dp))
@@ -567,9 +596,11 @@ private fun MediaDetail(
             Icon(Icons.Default.ContentCopy, null, Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp)); Text("Copy creator and license credit")
         }
-        TextButton(onClick = onSource) {
-            Icon(Icons.AutoMirrored.Filled.OpenInNew, null, Modifier.size(16.dp))
-            Spacer(Modifier.width(6.dp)); Text("View source and licensing")
+        if (SourcePolicy.isSafeHttps(item.sourceUrl)) {
+            TextButton(onClick = onSource) {
+                Icon(Icons.AutoMirrored.Filled.OpenInNew, null, Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp)); Text("View source and licensing")
+            }
         }
     }
 }

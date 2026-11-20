@@ -11,7 +11,7 @@
 | Download to phone | Implemented with Android MediaStore scoped storage | Android 10–current integration tests |
 | Attribution/source and copyable credit | Implemented in detail sheet; formats creator, license and safe source URL for clipboard | Attribution usability and device review |
 | Public DNS and HTTPS media hardening | Implemented in source with address validation, redirect separation and local unit tests | Real-network, DNS64 and device regression testing |
-| Native appearance | Jetpack Compose, approved GC UI alpha colors | Visual and accessibility audit |
+| Native appearance and media detail actions | Jetpack Compose, verified GC UI alpha colors; compact, scrollable detail sheet prioritizes Share/Download above preview | Small-screen/large-text emulator acceptance and accessibility audit |
 | GIF trending / personalized recommendations | Not implemented | Product/relevance planning |
 | Sticker pack installation into third-party keyboards | Not implemented | App-specific APIs / permissions |
 | Cloud synchronization | Not implemented | Consent, encryption, identity and Mesh |
