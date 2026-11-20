@@ -136,14 +136,31 @@ def find_node_with_scrolling(serial, phrase, max_swipes=45):
         try:
             for node in nodes(serial):
                 label = (node.get("text", "") + " " + node.get("content-desc", "")).strip()
-                if phrase.lower() in label.lower():
+                if phrase.lower() not in label.lower():
+                    continue
+                bounds = BOUNDS.fullmatch(node.get("bounds", ""))
+                if bounds is None:
+                    continue
+                left, top, right, bottom = map(int, bounds.groups())
+                # Accessibility trees can expose off-screen LazyGrid children.
+                # Never tap coordinates hidden by status or navigation chrome.
+                visible = (
+                    0 <= left < right <= width and
+                    int(height * 0.25) <= top < bottom <= int(height * 0.9)
+                )
+                if visible:
+                    print(
+                        f"QA_SCROLL_TARGET: {phrase!r} bounds={node.get('bounds')} "
+                        f"clickable={node.get('clickable')} swipes={step}",
+                        flush=True
+                    )
                     return node
         except (RuntimeError, subprocess.TimeoutExpired, ET.ParseError):
             pass
         if step < max_swipes:
             adb(serial, "shell", "input", "swipe", x, start_y, x, end_y, 90)
             time.sleep(0.15)
-    raise AssertionError(f"Could not scroll to {phrase!r} within {max_swipes} swipes")
+    raise AssertionError(f"Could not scroll to a visible {phrase!r} within {max_swipes} swipes")
 
 
 def verify_offline_restart(serial):

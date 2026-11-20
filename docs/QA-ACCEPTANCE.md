@@ -25,6 +25,7 @@
 | [44650846467](https://github.com/GoreeCloud/GIF/actions/runs/44650846467) | **SUCCESS on media-revalidation feature branch**, commit `6cf51b6`; the full existing six-step workflow passed | New cached-media rejection paths were unit-tested but malformed-file behavior is not separately exercised by the emulator |
 | [44650841153](https://github.com/GoreeCloud/GIF/actions/runs/44650841153) | Sticker-pagination branch emulator job failed **during Gradle dependency resolution**, before launch | Do not classify as a UI regression; repeat after merge |
 | [44652980425](https://github.com/GoreeCloud/GIF/actions/runs/44652980425) | **SUCCESS on protected main**, commit `ee3c095`: all six milestones including sticker save, private storage, MediaStore PNG export and attribution | Includes merged sticker pagination and cache quota; the actual 'Load more stickers' interaction is not covered by this script |
+| [44656284380](https://github.com/GoreeCloud/GIF/actions/runs/44656284380) | Optional extended run passed the six core milestones and **7/8 offline restart**, but the final UI pagination step remained at 60 rather than 120 items after tapping Load more | Improve scrolling to exclude offscreen LazyGrid accessibility nodes, log tap bounds, and retest to distinguish harness interaction from app behavior |
 
 These results establish a complete branch-level and protected-main emulator pass at the specified revisions, **not** acceptance on physical devices. The PNG MediaStore row check proves a published entry, not byte-for-byte image identity.
 

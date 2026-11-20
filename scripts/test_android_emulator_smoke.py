@@ -63,7 +63,7 @@ class SmokeHarnessTest(unittest.TestCase):
         footer = ET.Element("node", {
             "text": "Load more stickers",
             "content-desc": "",
-            "bounds": "[10,100][400,200]",
+            "bounds": "[10,800][400,900]",
         })
         with patch.object(smoke, "adb", return_value="Physical size: 1080x2340") as adb:
             with patch.object(smoke, "nodes", side_effect=[[], [footer]]):
@@ -72,6 +72,28 @@ class SmokeHarnessTest(unittest.TestCase):
                         "emulator-5580", "Load more stickers", max_swipes=2
                     )
         self.assertIs(found, footer)
+        self.assertTrue(
+            any(call.args[1:4] == ("shell", "input", "swipe") for call in adb.call_args_list)
+        )
+
+    def test_scroll_does_not_tap_offscreen_lazy_grid_elements(self):
+        offscreen = ET.Element("node", {
+            "text": "Load more stickers",
+            "content-desc": "",
+            "bounds": "[10,2500][400,2600]",
+        })
+        onscreen = ET.Element("node", {
+            "text": "Load more stickers",
+            "content-desc": "",
+            "bounds": "[10,800][400,900]",
+        })
+        with patch.object(smoke, "adb", return_value="Physical size: 1080x2340") as adb:
+            with patch.object(smoke, "nodes", side_effect=[[offscreen], [onscreen]]):
+                with patch.object(smoke.time, "sleep"):
+                    found = smoke.find_node_with_scrolling(
+                        "emulator-5580", "Load more stickers", max_swipes=2
+                    )
+        self.assertIs(found, onscreen)
         self.assertTrue(
             any(call.args[1:4] == ("shell", "input", "swipe") for call in adb.call_args_list)
         )
