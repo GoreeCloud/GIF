@@ -51,7 +51,7 @@ class GalleryViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun search(query: String, kind: MediaKind) {
-        val normalizedQuery = query.trim().ifBlank { "reaction" }
+        val normalizedQuery = GallerySearchQuery.normalize(query, kind)
         activeQuery = normalizedQuery
         activeKind = kind
         currentPage = 0
@@ -72,7 +72,7 @@ class GalleryViewModel(app: Application) : AndroidViewModel(app) {
                         hasMore.value = page.hasMore
                     }
                     MediaKind.STICKER -> {
-                        val page = stickers.search(query)
+                        val page = stickers.search(normalizedQuery)
                         results.value = page.items
                         currentPage = page.page
                         hasMore.value = page.hasMore
