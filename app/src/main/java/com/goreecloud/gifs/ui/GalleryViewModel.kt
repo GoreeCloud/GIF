@@ -1,6 +1,7 @@
 package com.goreecloud.gifs.ui
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.goreecloud.gifs.data.*
@@ -89,6 +90,7 @@ class GalleryViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    suspend fun importFromUri(uri: Uri): MediaItem = storage.importFromUri(uri)
     suspend fun toggleFavorite(item: MediaItem): Boolean = storage.toggle(item)
     suspend fun shareUri(item: MediaItem) = files.shareUri(item)
     suspend fun download(item: MediaItem) = files.saveToPhone(item)
