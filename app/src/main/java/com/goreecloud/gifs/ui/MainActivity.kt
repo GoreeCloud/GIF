@@ -49,6 +49,7 @@ import com.goreecloud.gifs.data.IncomingMediaPolicy
 import com.goreecloud.gifs.data.MediaAttribution
 import com.goreecloud.gifs.data.MediaItem
 import com.goreecloud.gifs.data.MediaKind
+import com.goreecloud.gifs.data.SavedFileNames
 import com.goreecloud.gifs.data.SavedGallery
 import com.goreecloud.gifs.data.SavedKind
 import com.goreecloud.gifs.data.PickerPolicy
@@ -562,9 +563,10 @@ private fun GalleryScreen(
 @Composable
 private fun MediaPreview(item: MediaItem, modifier: Modifier = Modifier, animate: Boolean = false) {
     val context = LocalContext.current
-    val saved = item.localFile?.let {
-        java.io.File(context.filesDir, "favorites/" + it)
-    }?.takeIf { it.isFile }
+    val saved = item.localFile
+        ?.takeIf { SavedFileNames.matches(item.id, item.kind, it) }
+        ?.let { java.io.File(context.filesDir, "favorites/" + it) }
+        ?.takeIf { it.isFile }
     AsyncImage(
         model = saved ?: if (animate && item.kind == MediaKind.GIF) item.url else item.thumbnail,
         contentDescription = item.title,

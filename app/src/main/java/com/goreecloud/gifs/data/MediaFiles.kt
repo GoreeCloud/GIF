@@ -15,7 +15,6 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 import java.io.IOException
-import java.security.MessageDigest
 import java.util.UUID
 
 /** Remote downloads are bounded, atomic, checked by magic bytes, and never executed. */
@@ -23,10 +22,7 @@ class MediaFiles(private val context: Context, private val client: OkHttpClient)
     private val lock = Mutex()
     private val maxBytes = ImportPolicy.MAX_BYTES
 
-    private fun safeName(item: MediaItem) =
-        MessageDigest.getInstance("SHA-256")
-            .digest(item.id.toByteArray(Charsets.UTF_8))
-            .joinToString("") { "%02x".format(it) } + "." + item.extension
+    private fun safeName(item: MediaItem) = SavedFileNames.expected(item.id, item.kind)
 
     private fun favoriteFile(item: MediaItem) = File(
         File(context.filesDir, "favorites"), safeName(item)
