@@ -13,6 +13,25 @@ class IncomingMediaPolicyTest {
         ))
     }
 
+    @Test fun multipleOrConflictingAndroidShareUrisAreRejected() {
+        assertFalse(IncomingMediaPolicy.accepts(
+            IncomingMediaPolicy.ACTION_SEND, "image/png", "content", "provider",
+            clipItemCount = 2
+        ))
+        assertFalse(IncomingMediaPolicy.accepts(
+            IncomingMediaPolicy.ACTION_SEND, "image/gif", "content", "provider",
+            clipItemCount = 1, uriSourcesAgree = false
+        ))
+        assertFalse(IncomingMediaPolicy.accepts(
+            IncomingMediaPolicy.ACTION_SEND, "image/png", "content", "provider",
+            clipItemCount = -1
+        ))
+        assertTrue(IncomingMediaPolicy.accepts(
+            IncomingMediaPolicy.ACTION_SEND, "image/png", "content", "provider",
+            clipItemCount = 1, uriSourcesAgree = true
+        ))
+    }
+
     @Test fun rejectsUnapprovedActionsAndMimes() {
         for (action in listOf(null, "", "android.intent.action.SEND_MULTIPLE", "android.intent.action.VIEW")) {
             assertFalse(IncomingMediaPolicy.accepts(action, "image/gif", "content", "images.provider"))
