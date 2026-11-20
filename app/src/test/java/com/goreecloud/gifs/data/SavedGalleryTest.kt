@@ -34,6 +34,45 @@ class SavedGalleryTest {
         assertTrue(SavedGallery.filter(items, "unknown", SavedKind.ALL).isEmpty())
     }
 
+    @Test fun sortingIsStableAndDoesNotMutatePersistedFavorites() {
+        val original = items.toList()
+        assertEquals(
+            listOf("b", "a"),
+            SavedGallery.filter(items, "", SavedKind.ALL, order = SavedOrder.RECENT).map { it.id }
+        )
+        assertEquals(
+            listOf("a", "b"),
+            SavedGallery.filter(items, "", SavedKind.ALL, order = SavedOrder.OLDEST).map { it.id }
+        )
+        assertEquals(original, items)
+    }
+
+    @Test fun alphabeticalOrderIsCaseInsensitiveAndDeterministic() {
+        val sameTitles = listOf(
+            items[0].copy(title = "banana"),
+            items[1].copy(title = "APPLE"),
+            items[0].copy(id = "c", title = "apple")
+        )
+        assertEquals(
+            listOf("b", "c", "a"),
+            SavedGallery.filter(
+                sameTitles, "", SavedKind.ALL, order = SavedOrder.TITLE
+            ).map { it.id }
+        )
+    }
+
+    @Test fun sortingRespectsExistingSearchAndMimeConstraints() {
+        assertEquals(
+            listOf("b"),
+            SavedGallery.filter(
+                items, "", SavedKind.ALL, "image/png", SavedOrder.RECENT
+            ).map { it.id }
+        )
+        assertTrue(
+            SavedGallery.filter(items, "nobody", SavedKind.ALL, order = SavedOrder.TITLE).isEmpty()
+        )
+    }
+
     @Test fun requestingAppMimeRestrictionStillApplies() {
         assertEquals(listOf("a"), SavedGallery.filter(items, "", SavedKind.ALL, "image/gif").map { it.id })
         assertEquals(listOf("b"), SavedGallery.filter(items, "", SavedKind.ALL, "image/png").map { it.id })

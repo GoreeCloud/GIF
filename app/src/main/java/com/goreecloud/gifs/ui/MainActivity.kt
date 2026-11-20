@@ -50,6 +50,7 @@ import com.goreecloud.gifs.data.MediaAttribution
 import com.goreecloud.gifs.data.MediaItem
 import com.goreecloud.gifs.data.MediaKind
 import com.goreecloud.gifs.data.SavedFileNames
+import com.goreecloud.gifs.data.SavedOrder
 import com.goreecloud.gifs.data.SavedGallery
 import com.goreecloud.gifs.data.SavedKind
 import com.goreecloud.gifs.data.PickerPolicy
@@ -196,6 +197,7 @@ private fun GalleryScreen(
     var exploreQuery by rememberSaveable { mutableStateOf("") }
     var savedQuery by rememberSaveable { mutableStateOf("") }
     var savedFilter by rememberSaveable { mutableStateOf(SavedKind.ALL.name) }
+    var savedOrder by rememberSaveable { mutableStateOf(SavedOrder.RECENT.name) }
     val query = if (tab == 0) exploreQuery else savedQuery
     var selected by remember { mutableStateOf<MediaItem?>(null) }
     var busyId by remember { mutableStateOf<String?>(null) }
@@ -228,7 +230,10 @@ private fun GalleryScreen(
     val shown = if (tab == 0) {
         results.filter { requestedMime == null || PickerPolicy.accepts(requestedMime, it) }
     } else {
-        SavedGallery.filter(favorites, savedQuery, SavedKind.valueOf(savedFilter), requestedMime)
+        SavedGallery.filter(
+            favorites, savedQuery, SavedKind.valueOf(savedFilter), requestedMime,
+            order = SavedOrder.valueOf(savedOrder)
+        )
     }
     val favoriteIds = favorites.map { it.id }.toSet()
 
@@ -389,6 +394,23 @@ private fun GalleryScreen(
                             enabled = requestedMime == null || requestedMime == "image/*" ||
                                 requestedMime == "image/png",
                             label = { Text("Stickers") }
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = savedOrder == SavedOrder.RECENT.name,
+                            onClick = { savedOrder = SavedOrder.RECENT.name },
+                            label = { Text("Newest") }
+                        )
+                        FilterChip(
+                            selected = savedOrder == SavedOrder.OLDEST.name,
+                            onClick = { savedOrder = SavedOrder.OLDEST.name },
+                            label = { Text("Oldest") }
+                        )
+                        FilterChip(
+                            selected = savedOrder == SavedOrder.TITLE.name,
+                            onClick = { savedOrder = SavedOrder.TITLE.name },
+                            label = { Text("A–Z") }
                         )
                     }
                 }
