@@ -16,6 +16,10 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+          cache: gradle
+          cache-dependency-path: |
+            **/*.gradle.kts
+            gradle/wrapper/gradle-wrapper.properties
       - name: Install Android 36 emulator and SDK 37
         shell: bash
         run: |
