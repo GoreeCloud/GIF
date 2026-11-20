@@ -38,12 +38,21 @@ class MediaFiles(private val context: Context, private val client: OkHttpClient)
     suspend fun acquire(item: MediaItem): File = withContext(Dispatchers.IO) {
         lock.withLock {
             val saved = favoriteFile(item)
-            if (saved.isFile && saved.length() > 0) return@withLock saved
+            if (saved.exists()) {
+                if (isValidStoredMedia(saved, item.kind)) return@withLock saved
+                // Never silently delete or overwrite a person's explicitly saved media.
+                throw IOException("Offline favorite is invalid. Remove it and save/import again.")
+            }
             val cached = shareFile(item)
-            if (cached.isFile && cached.length() > 0) {
-                // Keep recently shared URIs safe from quota eviction.
-                cached.setLastModified(System.currentTimeMillis())
-                return@withLock cached
+            if (cached.exists()) {
+                if (isValidStoredMedia(cached, item.kind)) {
+                    // Keep recently shared URIs safe from quota eviction.
+                    cached.setLastModified(System.currentTimeMillis())
+                    return@withLock cached
+                }
+                // Temporary cache is replaceable; invalid cached bytes must not
+                // be shared, exported to MediaStore, or copied into favorites.
+                if (!cached.delete()) throw IOException("Cannot replace invalid cached media.")
             }
             if (!SourcePolicy.isSafeHttps(item.url)) throw IOException("Unsafe media URL.")
             val dir = cached.parentFile ?: throw IOException("Missing cache directory")
@@ -72,7 +81,9 @@ class MediaFiles(private val context: Context, private val client: OkHttpClient)
                         }
                     }
                 }
-                if (!matchesMagic(temp, item.kind)) throw IOException("Unexpected image format.")
+                if (!isValidStoredMedia(temp, item.kind)) {
+                    throw IOException("Unexpected or invalid image format.")
+                }
                 if (!temp.renameTo(cached)) throw IOException("Cannot finalize downloaded image.")
             } finally {
                 temp.delete()
@@ -192,6 +203,10 @@ class MediaFiles(private val context: Context, private val client: OkHttpClient)
     }
 
     companion object {
+        /** Rejects empty, oversized or incorrectly typed app-private media. */
+        fun isValidStoredMedia(file: File, kind: MediaKind): Boolean =
+            file.isFile && file.length() in 8..ImportPolicy.MAX_BYTES && matchesMagic(file, kind)
+
         fun matchesMagic(file: File, kind: MediaKind): Boolean {
             if (!file.isFile || file.length() < 8) return false
             val bytes = ByteArray(8)
