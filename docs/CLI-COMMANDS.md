@@ -64,7 +64,8 @@ The manual emulator workflow explicitly targets an isolated `emulator-*` serial,
 ```bash
 gh run list -R GoreeCloud/GIF --workflow Android --branch main --limit 5
 gh run list -R GoreeCloud/GIF --workflow emulator-smoke.yml --limit 5
-gh workflow run emulator-smoke.yml -R GoreeCloud/GIF --ref main -f extended=true
+gh workflow run emulator-smoke.yml -R GoreeCloud/GIF --ref main -f extended=true -f verify_removal=true -f android_api=36
+# For Android 10 minimum API support, select -f android_api=29 and verify its run independently.
 gh run view RUN_ID -R GoreeCloud/GIF --json status,conclusion,headSha,headBranch
 gh run view RUN_ID -R GoreeCloud/GIF --log-failed
 adb devices -l
