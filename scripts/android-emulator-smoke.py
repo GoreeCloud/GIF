@@ -254,9 +254,12 @@ def verify_cross_app_interop(serial, fixture_apk):
     require_file(serial)
     print("10/11 External PNG import requires confirmation and persists offline", flush=True)
 
-    # The separate app requests image/png. It must be able to open the returned
-    # GoreeCloud FileProvider URI using only the temporary read grant.
-    adb(serial, "shell", "am", "start", "-n", FIXTURE_ACTIVITY)
+    # ACTION_SEND launched GoreeCloud over the fixture's task. A plain am start
+    # can leave that task displaying GoreeCloud; explicitly stop it and start
+    # a fresh external caller activity before requesting a picker result.
+    adb(serial, "shell", "am", "force-stop", PACKAGE)
+    adb(serial, "shell", "am", "start", "-S", "-W", "-n", FIXTURE_ACTIVITY)
+    find_node(serial, "GoreeCloud interoperability fixture", deadline=55)
     tap(serial, find_node(serial, "Request PNG from GoreeCloud", deadline=40))
     find_node(serial, "GoreeCloud GIF's", deadline=60)
     tap(serial, find_node(serial, "Saved (1)", exact=True, deadline=30))

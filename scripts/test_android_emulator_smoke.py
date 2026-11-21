@@ -204,6 +204,12 @@ class SmokeHarnessTest(unittest.TestCase):
         self.assertIn("Request PNG from GoreeCloud", clicked)
         self.assertIn("Choose interop-source", clicked)
         saved.assert_called_once_with("emulator-5580")
+        calls = [call.args for call in adb_mock.call_args_list]
+        self.assertIn(("emulator-5580", "shell", "am", "force-stop", smoke.PACKAGE), calls)
+        self.assertIn(
+            ("emulator-5580", "shell", "am", "start", "-S", "-W", "-n", smoke.FIXTURE_ACTIVITY),
+            calls
+        )
         self.assertTrue(any(call.args[1:4] == ("shell", "run-as", smoke.FIXTURE_PACKAGE)
                             for call in adb_mock.call_args_list))
 
