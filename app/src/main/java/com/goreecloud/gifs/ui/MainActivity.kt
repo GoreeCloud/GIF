@@ -49,6 +49,7 @@ import com.goreecloud.gifs.data.IncomingMediaPolicy
 import com.goreecloud.gifs.data.MediaAttribution
 import com.goreecloud.gifs.data.MediaItem
 import com.goreecloud.gifs.data.MediaKind
+import com.goreecloud.gifs.data.SavedRemovalPolicy
 import com.goreecloud.gifs.data.SavedFileNames
 import com.goreecloud.gifs.data.SavedOrder
 import com.goreecloud.gifs.data.SavedGallery
@@ -209,6 +210,7 @@ private fun GalleryScreen(
     var savedOrder by rememberSaveable { mutableStateOf(SavedOrder.RECENT.name) }
     val query = if (tab == 0) exploreQuery else savedQuery
     var selected by remember { mutableStateOf<MediaItem?>(null) }
+    var pendingRemoval by remember { mutableStateOf<MediaItem?>(null) }
     var busyId by remember { mutableStateOf<String?>(null) }
     val kind = MediaKind.valueOf(type)
     val uiScope = rememberCoroutineScope()
@@ -253,16 +255,25 @@ private fun GalleryScreen(
     }
     val favoriteIds = favorites.map { it.id }.toSet()
 
-    fun favorite(item: MediaItem) {
+    fun performFavoriteChange(item: MediaItem) {
         if (busyId != null) return
         busyId = item.id
         uiScope.launch {
             try {
                 val nowSaved = viewModel.toggleFavorite(item)
+                if (!nowSaved) selected = null
                 snackbar.showSnackbar(if (nowSaved) "Saved for offline use" else "Removed from favorites")
             } catch (e: Exception) {
                 snackbar.showSnackbar(e.message ?: "Could not update favorites.")
             } finally { busyId = null }
+        }
+    }
+    fun favorite(item: MediaItem) {
+        if (busyId != null || pendingRemoval != null) return
+        if (SavedRemovalPolicy.requiresConfirmation(favoriteIds, item)) {
+            pendingRemoval = item
+        } else {
+            performFavoriteChange(item)
         }
     }
     fun copyAttribution(item: MediaItem) {
@@ -565,6 +576,26 @@ private fun GalleryScreen(
                 }
             }
         }
+    }
+    pendingRemoval?.let { item ->
+        AlertDialog(
+            onDismissRequest = { pendingRemoval = null },
+            title = { Text("Remove saved image?") },
+            text = { Text(SavedRemovalPolicy.warning(item)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingRemoval = null
+                        // Do not accidentally re-save an item already removed elsewhere.
+                        if (item.id in favoriteIds) performFavoriteChange(item)
+                    },
+                    enabled = busyId == null
+                ) { Text("Remove offline copy") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingRemoval = null }) { Text("Keep saved") }
+            }
+        )
     }
     pendingSharedUri?.let { sharedUri ->
         AlertDialog(

@@ -1,11 +1,11 @@
 # GoreeCloud GIF's — Android acceptance evidence
 
-**Status:** The six-step Android 36 cloud-emulator acceptance **passed on multiple protected-main revisions**, most recently run #44652980425 at commit `ee3c095` (after the share-cache quota and sticker-pagination changes). The later saved-file path hardening passed Android CI, but its emulator regression remains a separate gate. No physical-phone installation, Stable release, or production deployment is asserted.
+**Status:** Eight-step Android 36 cloud-emulator acceptance **passed on protected main** in run #44872648959, commit `045c0999`, after the integrated privacy, MediaStore, retry and Saved-index changes. An additional ninth-step Saved-removal confirmation acceptance **passed on branch** in run #44872989620, commit `e5600bc`; repeat after merge is a separate gate. No physical-phone installation, Stable release, or production deployment is asserted.
 
 ## CI and acceptance scope
 
 - Required `Android` workflow: Android SDK 37 compile, unit tests, Android lint, debug APK, SHA-256 verification and seven-day artifact.
-- Manual `Android emulator smoke (manual)` workflow: isolated Android 36 x86_64 emulator with shell-only ADB. Default tests six core steps. The optional **extended** workflow input additionally verifies private favorite persistence after force-stop/relaunch with Wi-Fi and mobile data disabled and native sticker pagination from 60 to 120 items. Eight-step extended acceptance passed on corrected feature-branch run #44658719227; protected-main repetition is still pending. The test never targets a connected physical phone.
+- Manual `Android emulator smoke (manual)` workflow: isolated Android 36 x86_64 emulator with shell-only ADB. Default tests six core steps. Optional `extended=true` verifies offline private Saved persistence after app restart and sticker pagination from 60 to 120 items; this passed on protected main in run #44872648959. With `verify_removal=true`, a ninth step checks canceling deletion preserves the private file and confirmed deletion removes it; this passed on feature-branch run #44872989620. The test never targets a physical phone.
 - Host-side Python tests run on every `Android` CI check to exercise the accessibility-UI retry and coordinate logic without booting a device.
 - Passing unit tests or a booted emulator **does not** prove actual on-device downloads, animated GIF behavior, other-app integration, or accessibility compliance.
 
@@ -28,12 +28,15 @@
 | [44656284380](https://github.com/GoreeCloud/GIF/actions/runs/44656284380) | Optional extended run passed six core milestones and **7/8 offline restart**, but Load more did not increase the sticker count | Improve scrolling diagnostics and investigate app pagination query |
 | [44657499456](https://github.com/GoreeCloud/GIF/actions/runs/44657499456) | Optional extended rerun passed **7/8** and found a visible Load more text node at [411,1801][742,1856], but still showed 60 items | Verified source bug: an empty sticker search is initially unfiltered but active query was normalized to the GIF default `reaction` for page two; fix shared query normalization and rerun |
 | [44658719227](https://github.com/GoreeCloud/GIF/actions/runs/44658719227) | **SUCCESS on corrected feature branch**, commit `4cac95b`: all eight milestones passed, including private sticker persistence after force-stop with Wi-Fi and mobile data disabled and native sticker pagination increasing from 60 to 120 items | Repeat extended regression on protected main after merge; this is not third-party or physical-device acceptance |
+| [44872134494](https://github.com/GoreeCloud/GIF/actions/runs/44872134494) | **SUCCESS** on integration branch commit `6012121`: all eight milestones passed after privacy-first remote search, bounded Openverse retry, MediaStore export checks and Saved index hardening | Repeat on protected main |
+| [44872648959](https://github.com/GoreeCloud/GIF/actions/runs/44872648959) | **SUCCESS on protected main** commit `045c0999`: all eight milestones passed including media library publication, offline Saved restart and native sticker pagination | Further physical/third-party acceptance remains open |
+| [44872989620](https://github.com/GoreeCloud/GIF/actions/runs/44872989620) | **SUCCESS** on saved-removal feature branch commit `e5600bc`: all nine milestones passed including Keep saved cancellation and deletion only after explicit confirmation | Repeat nine-step acceptance on protected main after merge |
 
-These results establish a complete branch-level and protected-main emulator pass at the specified revisions, **not** acceptance on physical devices. The PNG MediaStore row check proves a published entry, not byte-for-byte image identity.
+These results establish a complete branch-level and protected-main emulator pass at the specified revisions, **not** acceptance on physical devices. The PNG MediaStore row check proves a published entry, not byte-for-byte image identity. Optional `verify_removal=true` with `extended=true` additionally tests cancellation of deletion, preserved private files, and explicit offline-file deletion. The ninth milestone passed in branch run #44872989620, but physical-device and protected-main repeat acceptance remain open.
 
 ## Exit criteria
 
-1. **Verified through protected-main commit `ee3c095`:** the manual workflow completed all six smoke milestones; repeat after later changes and extend it to pagination, imports and third-party picker/share journeys.
+1. **Verified through protected-main commit `045c0999`:** the manual workflow completed all eight extended milestones. The ninth saved-removal milestone passed on the reviewed feature branch. Repeat after merge; extend to local import and third-party picker/share journeys.
 2. The Saved sticker and downloaded PNG remain usable without network connectivity, with local-file and MediaStore evidence.
 3. Native share-sheet and `ACTION_GET_CONTENT` consumers receive MIME-correct read-only URIs on representative Android versions.
 4. Animated GIF preview, accessibility, resource use, storage limits and attributions receive human/device review.

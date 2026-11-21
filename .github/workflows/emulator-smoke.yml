@@ -8,6 +8,11 @@ on:
         required: false
         type: boolean
         default: false
+      verify_removal:
+        description: "With extended=true, test Saved deletion cancel/confirmation"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -63,6 +68,7 @@ jobs:
           trap 'adb -s emulator-5580 emu kill >/dev/null 2>&1 || true; kill "$EMULATOR_PID" >/dev/null 2>&1 || true' EXIT
           EXTRA=()
           if [ "${{ inputs.extended }}" = "true" ]; then EXTRA+=(--extended); fi
+          if [ "${{ inputs.verify_removal }}" = "true" ]; then EXTRA+=(--verify-removal); fi
           python3 scripts/android-emulator-smoke.py --serial emulator-5580 --apk app/build/outputs/apk/debug/app-debug.apk "${EXTRA[@]}"
       - name: Upload isolated emulator diagnostics on failure
         if: failure()
