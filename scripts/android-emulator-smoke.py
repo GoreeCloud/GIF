@@ -44,6 +44,14 @@ def wait_boot(serial, deadline=180):
 UI_DUMP = "/data/local/tmp/goreecloud-gif-ui.xml"
 
 
+def usable_bounds(raw):
+    match = BOUNDS.fullmatch(raw or "")
+    if match is None:
+        return False
+    left, top, right, bottom = map(int, match.groups())
+    return left < right and top < bottom
+
+
 def nodes(serial):
     # /sdcard can be unavailable briefly after boot; the shell-owned temporary
     # directory remains accessible. Some Android versions exit 0 without
@@ -54,7 +62,21 @@ def nodes(serial):
     except RuntimeError as exc:
         raise RuntimeError(f"UI hierarchy not ready ({output.strip()}): {exc}") from exc
     try:
-        return list(ET.fromstring(xml).iter("node"))
+        root = ET.fromstring(xml)
+        # Some Android accessibility providers expose a TextView with [0,0][0,0]
+        # even when its enclosing navigation item is clickable and on-screen.
+        # Carry the nearest usable clickable ancestor's bounds for safe taps.
+        def annotate(node, clickable_parent=None):
+            bounds = node.get("bounds", "")
+            if node.get("clickable") == "true" and usable_bounds(bounds):
+                clickable_parent = bounds
+            if not usable_bounds(bounds) and clickable_parent:
+                node.set("tap-bounds", clickable_parent)
+            for child in node:
+                annotate(child, clickable_parent)
+
+        annotate(root)
+        return list(root.iter("node"))
     except ET.ParseError as exc:
         raise RuntimeError(f"UI hierarchy incomplete ({output.strip()}): {exc}") from exc
 
@@ -112,10 +134,10 @@ def capture_failure(serial):
 
 
 def tap(serial, node):
-    bounds = BOUNDS.fullmatch(node.get("bounds", ""))
-    if bounds is None:
-        raise AssertionError("UI node has no bounds")
-    left, top, right, bottom = map(int, bounds.groups())
+    raw = node.get("tap-bounds") or node.get("bounds", "")
+    if not usable_bounds(raw):
+        raise AssertionError("UI node has no usable on-screen tap bounds")
+    left, top, right, bottom = map(int, BOUNDS.fullmatch(raw).groups())
     adb(serial, "shell", "input", "tap", (left + right) // 2, (top + bottom) // 2)
 
 
@@ -140,7 +162,7 @@ def find_node_with_scrolling(serial, phrase, max_swipes=45):
                 label = (node.get("text", "") + " " + node.get("content-desc", "")).strip()
                 if phrase.lower() not in label.lower():
                     continue
-                bounds = BOUNDS.fullmatch(node.get("bounds", ""))
+                bounds = BOUNDS.fullmatch(node.get("tap-bounds") or node.get("bounds", ""))
                 if bounds is None:
                     continue
                 left, top, right, bottom = map(int, bounds.groups())

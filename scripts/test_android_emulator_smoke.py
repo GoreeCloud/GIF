@@ -29,6 +29,29 @@ class SmokeHarnessTest(unittest.TestCase):
                 found = smoke.find_node("emulator-5580", "Stickers", exact=True, deadline=5)
         self.assertIs(found, node)
 
+    def test_tap_uses_clickable_parent_when_android_text_bounds_are_zero(self):
+        hierarchy = (
+            '<hierarchy><node text="" bounds="[551,1988][1080,2072]" clickable="true">'
+            '<node text="Saved (1)" bounds="[0,0][0,0]" clickable="false"/>'
+            '</node></hierarchy>'
+        )
+        with patch.object(smoke, "adb", side_effect=["UI hierarchy dumped", hierarchy]):
+            result = smoke.nodes("emulator-5580")
+        saved = next(node for node in result if node.get("text") == "Saved (1)")
+        self.assertEqual(saved.get("tap-bounds"), "[551,1988][1080,2072]")
+        with patch.object(smoke, "adb") as adb:
+            smoke.tap("emulator-5580", saved)
+        self.assertEqual(
+            adb.call_args.args, ("emulator-5580", "shell", "input", "tap", 815, 2030)
+        )
+
+    def test_zero_size_unclickable_bounds_are_never_tapped(self):
+        node = ET.Element("node", {"bounds": "[0,0][0,0]"})
+        with patch.object(smoke, "adb") as adb:
+            with self.assertRaises(AssertionError):
+                smoke.tap("emulator-5580", node)
+        adb.assert_not_called()
+
     def test_tap_uses_center_of_actual_accessibility_bounds(self):
         node = ET.Element("node", {"bounds": "[20,30][120,230]"})
         with patch.object(smoke, "adb") as call:
