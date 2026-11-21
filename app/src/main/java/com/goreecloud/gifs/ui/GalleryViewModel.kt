@@ -18,6 +18,7 @@ class GalleryViewModel(app: Application) : AndroidViewModel(app) {
     private val storage = FavoritesStore(app, files)
 
     val favorites = MutableStateFlow<List<MediaItem>>(emptyList())
+    val favoritesError = MutableStateFlow<String?>(null)
     val results = MutableStateFlow<List<MediaItem>>(emptyList())
     val loading = MutableStateFlow(false)
     val loadingMore = MutableStateFlow(false)
@@ -47,7 +48,19 @@ class GalleryViewModel(app: Application) : AndroidViewModel(app) {
     private var currentPage = 0
 
     init {
-        viewModelScope.launch { storage.items.collect { favorites.value = it } }
+        viewModelScope.launch {
+            try {
+                storage.items.collect {
+                    favorites.value = it
+                    favoritesError.value = null
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                favoritesError.value =
+                    "Saved gallery could not be read. Existing files were not changed."
+            }
+        }
     }
 
     fun search(query: String, kind: MediaKind) {
