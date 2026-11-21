@@ -26,16 +26,16 @@ Android Studio / Android SDK 37, JDK 21 and Gradle wrapper. Minimum Android 10 (
 ./gradlew :app:testDebugUnitTest :app:assembleDebug :app:lintDebug
 ```
 
-A separately triggered GitHub Actions workflow, **Android emulator smoke (manual)**, is included to exercise app startup, OpenMoji search, offline favorite storage and MediaStore export on an isolated Android 36 emulator. The normal Android CI also runs host-side Python tests of the smoke harness. Six-step cloud-emulator runs succeeded on reviewed branches and protected main through commit `ee3c095` (see [QA evidence](docs/QA-ACCEPTANCE.md)). This is not a substitute for regression testing after later changes, physical-device testing or third-party-app acceptance.
+A separately triggered GitHub Actions workflow, **Android emulator smoke (manual)**, is included to exercise app startup, OpenMoji search, offline favorite storage and MediaStore export on an isolated Android 36 emulator. The normal Android CI also runs host-side Python tests of the smoke harness. Eight-step Android emulator runs succeeded on the reviewed integration branch and protected-main commit `045c0999` (see [QA evidence](docs/QA-ACCEPTANCE.md)). A nine-step deletion-confirmation branch run also passed; its protected-main repetition remains a separate gate. This is not a substitute for regression testing after later changes, physical-device testing or third-party-app acceptance.
 
 Find the development-signed debug APK at `app/build/outputs/apk/debug/app-debug.apk`. After a passing GitHub Actions Android run, the `goreecloud-gifs-debug-apk` run artifact contains this debug APK and a SHA-256 checksum file for 7 days. Download the artifact from GitHub Actions (signed-in access may be required) and verify the checksum before testing. Debug APKs are for local development, not an audited or production-signed release. Open the project in Android Studio to run on an emulator or authorized device. The app's display name is **GoreeCloud GIF's** and package is `com.goreecloud.gifs`.
 
 ## How to use
 
-1. Browse **Explore**. Choose GIFs or Stickers and enter a search query. A blank GIF search shows reactions.
+1. Browse **Explore**. For GIFs, enter a phrase and explicitly press **Search GIFs** to send it to Openverse; nothing is submitted on launch or while typing. Sticker filtering uses local OpenMoji metadata and can be browsed with a blank query.
 2. Tap an image for a larger preview, details, attribution and actions. Use **Copy creator and license credit** to save the source details before forwarding media.
 3. Tap **heart** to save offline, **Share** to send media through Android's chooser, or **Download** to place the file in Pictures/GoreeCloud GIFs.
-4. Open **Saved** to access offline favorites even if search is unavailable. Use the separate Saved search or the All / GIFs / Stickers chips to quickly find what you kept.
+4. Open **Saved** to access offline favorites even if search is unavailable. Use the independent Saved search, All / GIFs / Stickers filters and Newest / Oldest / A–Z sorting. Removing a favorite now requires explicit confirmation; imported files may have no recoverable remote source.
 5. From **Saved**, tap **Import** to select a personal GIF or PNG. The file is checked, kept locally for offline use, and can be shared or downloaded from the gallery.
 6. From another Android app, share a GIF or PNG file to **GoreeCloud GIF's** to copy it into Saved, without granting broad storage access.
 7. In apps that invoke Android's compatible `ACTION_GET_CONTENT` image picker, choose **GoreeCloud GIF's**, browse or search, and tap **Use in app**. This does not install a system keyboard or extend every modern photo picker.
