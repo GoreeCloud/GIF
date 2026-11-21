@@ -12,6 +12,7 @@ This project is a development alpha, not a production-hardened service. Please r
 - Persisted local favorite filenames must exactly match the SHA-256-derived identifier and GIF/PNG extension expected for that media record; malformed paths cannot direct previews outside the private favorites directory.
 - Scoped MediaStore exports are treated as successful only after the source byte count was copied and the row was published; incomplete/failed transactions attempt to delete the pending row without masking the original error.
 - Unreadable or partially malformed DataStore favorite indexes fail closed rather than silently becoming empty; the app surfaces a persistent Saved warning and prevents overwriting those records. A failed index write attempts to roll back only a newly created favorite, not preexisting user media.
+- The QA-only cross-app fixture is built as a separate Android package, not bundled into the consumer APK. Its generated media provider is non-exported, read-only and only accessible via explicit per-intent URI grants; the fixture has no network permissions.
 - App-private favorites; explicitly permissioned temporary Android content URI sharing. `ACTION_GET_CONTENT` responses require an explicit item choice, restrict GIF/PNG MIME types and grant only temporary read access to the selected item.
 - Gradle and dependency versions pinned; source review and CI remain ongoing.
 

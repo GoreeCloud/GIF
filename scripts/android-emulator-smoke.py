@@ -14,6 +14,8 @@ import time
 import xml.etree.ElementTree as ET
 
 PACKAGE = "com.goreecloud.gifs"
+FIXTURE_PACKAGE = "com.goreecloud.gifs.interopfixture"
+FIXTURE_ACTIVITY = FIXTURE_PACKAGE + "/.InteropActivity"
 BOUNDS = re.compile(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]")
 
 
@@ -234,6 +236,46 @@ def verify_removal_requires_confirmation(serial):
         raise AssertionError("Favorite file survived confirmed deletion: " + files[:250])
 
 
+def verify_cross_app_interop(serial, fixture_apk):
+    """Verify Android's cross-UID URI grant in both send and picker directions."""
+    if not serial.startswith("emulator-"):
+        raise ValueError("Cross-app acceptance is restricted to isolated emulators")
+    adb(serial, "install", "-r", fixture_apk, timeout=160)
+    adb(serial, "shell", "am", "start", "-n", FIXTURE_ACTIVITY)
+    find_node(serial, "GoreeCloud interoperability fixture", deadline=60)
+
+    # Fixture-owned content:// PNG is shared into GoreeCloud with a temporary
+    # Android URI grant and cannot be read without the in-app import consent.
+    # Framework Button labels may render as ALL CAPS; use case-insensitive lookup.
+    tap(serial, find_node(serial, "Send PNG to GoreeCloud"))
+    find_node(serial, "Import shared image?", deadline=45)
+    tap(serial, find_node(serial, "Save offline", exact=True))
+    find_node(serial, "Saved (1)", deadline=70)
+    require_file(serial)
+    print("10/11 External PNG import requires confirmation and persists offline", flush=True)
+
+    # ACTION_SEND launched GoreeCloud over the fixture's task. A plain am start
+    # can leave that task displaying GoreeCloud; explicitly stop it and start
+    # a fresh external caller activity before requesting a picker result.
+    adb(serial, "shell", "am", "force-stop", PACKAGE)
+    adb(serial, "shell", "am", "start", "-S", "-W", "-n", FIXTURE_ACTIVITY)
+    find_node(serial, "GoreeCloud interoperability fixture", deadline=55)
+    tap(serial, find_node(serial, "Request PNG from GoreeCloud", deadline=40))
+    find_node(serial, "GoreeCloud GIF's", deadline=60)
+    tap(serial, find_node(serial, "Saved (1)", exact=True, deadline=30))
+    # The toolbar also says "Choose media"; select the actual result button.
+    tap(serial, find_node(serial, "Choose interop-source", exact=True, deadline=35))
+    find_node(serial, "PASS PNG GRANT", deadline=65)
+    result = adb(
+        serial, "shell", "run-as", FIXTURE_PACKAGE, "cat",
+        "files/interop-result.txt", timeout=25
+    ).strip()
+    if result != "PASS PNG GRANT mime=image/png":
+        raise AssertionError("Cross-UID picker result was not readable: " + result[:150])
+    print("11/11 External caller opens granted GIF gallery PNG URI", flush=True)
+    print("INTEROP_SMOKE_SUCCESS: Android cross-app share and picker verified", flush=True)
+
+
 def require_mediastore_download(serial):
     """Check the actual Android MediaStore row, not just a transient UI toast."""
     listing = adb(
@@ -268,11 +310,19 @@ def main():
         "--verify-removal", action="store_true",
         help="With --extended: verify Save removal cancellation and confirmation"
     )
+    parser.add_argument(
+        "--verify-interop", action="store_true",
+        help="With --extended and --verify-removal: test cross-app PNG send and pick"
+    )
+    parser.add_argument("--fixture-apk", help="QA-only external Android caller APK")
     args = parser.parse_args()
     if not args.serial.startswith("emulator-"):
         parser.error("Only an emulator serial is allowed")
     if args.verify_removal and not args.extended:
         parser.error("--verify-removal requires --extended")
+    if args.verify_interop and (not args.extended or
+                                not args.verify_removal or not args.fixture_apk):
+        parser.error("--verify-interop requires --extended, --verify-removal and --fixture-apk")
     wait_boot(args.serial)
     print("1/6 Emulator booted", flush=True)
     adb(args.serial, "install", "-r", args.apk, timeout=160)
@@ -313,6 +363,8 @@ def main():
             verify_removal_requires_confirmation(args.serial)
             print("9/9 Confirmation protects saved files and explicit deletion succeeds", flush=True)
             print("REMOVAL_SMOKE_SUCCESS: cancel and confirm behaviors verified", flush=True)
+            if args.verify_interop:
+                verify_cross_app_interop(args.serial, args.fixture_apk)
 
 
 if __name__ == "__main__":

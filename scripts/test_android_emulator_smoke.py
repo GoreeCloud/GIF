@@ -178,6 +178,47 @@ class SmokeHarnessTest(unittest.TestCase):
         )
         saved.assert_called_once_with("emulator-5580")
 
+    def test_cross_app_checks_real_granted_png_result_without_using_physical_device(self):
+        clicked = []
+
+        def fake_find(serial, phrase, **kwargs):
+            self.assertEqual("emulator-5580", serial)
+            # Android framework Buttons can expose uppercase text.
+            if phrase in ("Send PNG to GoreeCloud", "Request PNG from GoreeCloud"):
+                self.assertFalse(kwargs.get("exact", False))
+            return ET.Element("node", {"text": phrase})
+
+        def fake_adb(serial, *args, **kwargs):
+            self.assertEqual("emulator-5580", serial)
+            if args[:3] == ("shell", "run-as", smoke.FIXTURE_PACKAGE):
+                return "PASS PNG GRANT mime=image/png"
+            return ""
+
+        with patch.object(smoke, "adb", side_effect=fake_adb) as adb_mock:
+            with patch.object(smoke, "find_node", side_effect=fake_find):
+                with patch.object(smoke, "tap",
+                                  side_effect=lambda serial, node: clicked.append(node.get("text"))):
+                    with patch.object(smoke, "require_file") as saved:
+                        smoke.verify_cross_app_interop("emulator-5580", "fixture-debug.apk")
+        self.assertIn("Send PNG to GoreeCloud", clicked)
+        self.assertIn("Request PNG from GoreeCloud", clicked)
+        self.assertIn("Choose interop-source", clicked)
+        saved.assert_called_once_with("emulator-5580")
+        calls = [call.args for call in adb_mock.call_args_list]
+        self.assertIn(("emulator-5580", "shell", "am", "force-stop", smoke.PACKAGE), calls)
+        self.assertIn(
+            ("emulator-5580", "shell", "am", "start", "-S", "-W", "-n", smoke.FIXTURE_ACTIVITY),
+            calls
+        )
+        self.assertTrue(any(call.args[1:4] == ("shell", "run-as", smoke.FIXTURE_PACKAGE)
+                            for call in adb_mock.call_args_list))
+
+    def test_cross_app_rejects_physical_devices_without_access(self):
+        with patch.object(smoke, "adb") as adb_mock:
+            with self.assertRaises(ValueError):
+                smoke.verify_cross_app_interop("real-phone-123", "fixture-debug.apk")
+            adb_mock.assert_not_called()
+
     def test_ignores_transient_malformed_xml(self):
         with patch.object(smoke, "adb", side_effect=["dump complete", "<hierarchy>"]):
             with self.assertRaises(RuntimeError) as error:
