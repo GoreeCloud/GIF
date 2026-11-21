@@ -1,11 +1,15 @@
 package com.goreecloud.gifs.data
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
 import org.json.JSONObject
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -20,7 +24,10 @@ data class GifSearchPage(
  * No API key required. Openverse's anonymous endpoint permits at most 20
  * records per page (larger values return HTTP 401).
  */
-class OpenverseClient(private val client: OkHttpClient) {
+class OpenverseClient(
+    private val client: OkHttpClient,
+    private val waitBeforeRetry: suspend (Long) -> Unit = { delay(it) }
+) {
     suspend fun searchGifs(query: String, page: Int = 1): GifSearchPage = withContext(Dispatchers.IO) {
         val q = query.trim().take(MAX_QUERY_CHARS)
         if (q.isEmpty()) return@withContext GifSearchPage(emptyList(), 1, false)
@@ -31,34 +38,51 @@ class OpenverseClient(private val client: OkHttpClient) {
             .header("Accept", "application/json")
             .header("User-Agent", "GoreeCloud-GIFs/0.1 (+https://github.com/GoreeCloud/GIF)")
             .build()
-        val body = client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                when (response.code) {
-                    429 -> throw IOException("Openverse is busy. Please try again shortly.")
-                    401, 403 -> throw IOException("Openverse refused the anonymous request.")
-                    else -> throw IOException("GIF search unavailable (HTTP " + response.code + ").")
-                }
-            }
-            // Limit the response to bound memory use from the search endpoint.
-            val responseBody = response.body ?: throw IOException("Openverse returned no data.")
-            if (responseBody.contentLength() > MAX_JSON_BYTES) {
-                throw IOException("Openverse response too large.")
-            }
-            responseBody.charStream().use { reader ->
-                val buffer = CharArray(8192)
-                val content = StringBuilder()
-                while (true) {
-                    val read = reader.read(buffer)
-                    if (read == -1) break
-                    if (content.length.toLong() + read > MAX_JSON_BYTES) {
-                        throw IOException("Openverse response too large.")
+        parsePage(fetchWithRetry(request), requestedPage)
+    }
+
+    private suspend fun fetchWithRetry(request: Request): String {
+        for (retriesSoFar in 0..OpenverseRetryPolicy.MAX_RETRIES) {
+            currentCoroutineContext().ensureActive()
+            var retryDelay: Long? = null
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) return readBoundedJson(response)
+                if (OpenverseRetryPolicy.shouldRetry(response.code, retriesSoFar)) {
+                    retryDelay = OpenverseRetryPolicy.delayMillis(
+                        retriesSoFar, response.header("Retry-After")
+                    )
+                } else {
+                    when (response.code) {
+                        429 -> throw IOException("Openverse is busy. Please try again shortly.")
+                        401, 403 -> throw IOException("Openverse refused the anonymous request.")
+                        else -> throw IOException("GIF search unavailable (HTTP " + response.code + ").")
                     }
-                    content.append(buffer, 0, read)
                 }
-                content.toString()
             }
+            // The response is closed before sleeping. Cancellation interrupts this delay.
+            waitBeforeRetry(retryDelay ?: 0L)
         }
-        parsePage(body, requestedPage)
+        throw IOException("GIF search unavailable after bounded retries.")
+    }
+
+    private fun readBoundedJson(response: Response): String {
+        val responseBody = response.body ?: throw IOException("Openverse returned no data.")
+        if (responseBody.contentLength() > MAX_JSON_BYTES) {
+            throw IOException("Openverse response too large.")
+        }
+        return responseBody.charStream().use { reader ->
+            val buffer = CharArray(8192)
+            val content = StringBuilder()
+            while (true) {
+                val read = reader.read(buffer)
+                if (read == -1) break
+                if (content.length.toLong() + read > MAX_JSON_BYTES) {
+                    throw IOException("Openverse response too large.")
+                }
+                content.append(buffer, 0, read)
+            }
+            content.toString()
+        }
     }
 
     companion object {

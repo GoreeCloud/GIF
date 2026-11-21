@@ -190,6 +190,7 @@ private fun GalleryScreen(
 ) {
     val results by viewModel.results.collectAsStateWithLifecycle()
     val favorites by viewModel.favorites.collectAsStateWithLifecycle()
+    val favoritesError by viewModel.favoritesError.collectAsStateWithLifecycle()
     val loading by viewModel.loading.collectAsStateWithLifecycle()
     val loadingMore by viewModel.loadingMore.collectAsStateWithLifecycle()
     val hasMore by viewModel.hasMore.collectAsStateWithLifecycle()
@@ -217,8 +218,15 @@ private fun GalleryScreen(
 
     LaunchedEffect(exploreQuery, type, tab) {
         if (tab == 0) {
-            delay(if (exploreQuery.isBlank()) 0 else 400)
-            viewModel.search(exploreQuery, kind)
+            if (kind == MediaKind.STICKER) {
+                // Local catalog search stays responsive while typing.
+                delay(if (exploreQuery.isBlank()) 0 else 400)
+                viewModel.search(exploreQuery, MediaKind.STICKER)
+            } else {
+                // Clear stale results without sending a keystroke or launch query.
+                // Remote GIF searches are performed only by the explicit Search action.
+                viewModel.search("", MediaKind.GIF)
+            }
         }
     }
     LaunchedEffect(lastImportedId) {
@@ -357,7 +365,9 @@ private fun GalleryScreen(
                     },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(onSearch = {
-                        if (tab == 0) viewModel.search(exploreQuery, kind)
+                        if (tab == 0 && kind == MediaKind.GIF) {
+                            viewModel.search(exploreQuery, MediaKind.GIF)
+                        }
                         focusManager.clearFocus()
                     })
                 )
@@ -379,6 +389,22 @@ private fun GalleryScreen(
                                 requestedMime == "image/png",
                             label = { Text("Stickers") },
                             leadingIcon = { Icon(Icons.Default.EmojiEmotions, null, Modifier.size(18.dp)) }
+                        )
+                    }
+                    if (kind == MediaKind.GIF) {
+                        Spacer(Modifier.height(10.dp))
+                        Button(
+                            onClick = {
+                                viewModel.search(exploreQuery, MediaKind.GIF)
+                                focusManager.clearFocus()
+                            },
+                            enabled = exploreQuery.isNotBlank(),
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Search GIFs") }
+                        Text(
+                            "GIF searches are sent to Openverse only after you press Search.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 } else {
@@ -440,6 +466,15 @@ private fun GalleryScreen(
                     Text(shown.size.toString() + " items", style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+            }
+            if (tab == 1 && favoritesError != null) {
+                Text(
+                    favoritesError.orEmpty(),
+                    modifier = Modifier.fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
             if (loading && tab == 0) {
                 LinearProgressIndicator(Modifier.fillMaxWidth().semantics {

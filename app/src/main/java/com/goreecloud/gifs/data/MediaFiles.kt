@@ -163,6 +163,10 @@ class MediaFiles(private val context: Context, private val client: OkHttpClient)
         item.copy(localFile = destination.name)
     }
 
+    suspend fun hasFavoriteFile(item: MediaItem): Boolean = withContext(Dispatchers.IO) {
+        favoriteFile(item).isFile
+    }
+
     suspend fun removeFavorite(item: MediaItem) = withContext(Dispatchers.IO) {
         favoriteFile(item).delete()
     }
@@ -187,13 +191,16 @@ class MediaFiles(private val context: Context, private val client: OkHttpClient)
         val resolver = context.contentResolver
         val uri = resolver.insert(collection, values) ?: throw IOException("Cannot save to photo library.")
         try {
+            val expected = file.length()
             val output = resolver.openOutputStream(uri) ?: throw IOException("MediaStore unavailable.")
-            output.use { stream -> file.inputStream().use { it.copyTo(stream) } }
+            val copied = output.use { stream -> file.inputStream().use { it.copyTo(stream) } }
+            MediaStoreExportCheck.requireCopied(expected, copied)
             val done = ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }
-            resolver.update(uri, done, null, null)
+            MediaStoreExportCheck.requirePublished(resolver.update(uri, done, null, null))
             uri
         } catch (error: Exception) {
-            resolver.delete(uri, null, null)
+            // Keep the original failure visible even if cleanup also fails.
+            runCatching { resolver.delete(uri, null, null) }
             throw error
         }
     }
