@@ -132,6 +132,29 @@ class SmokeHarnessTest(unittest.TestCase):
         self.assertIn(("shell", "svc", "wifi", "enable"), calls)
         self.assertIn(("shell", "svc", "data", "enable"), calls)
 
+    def test_removal_needs_cancel_and_explicit_confirmation(self):
+        actions = []
+
+        def find(serial, phrase, **kwargs):
+            self.assertEqual(serial, "emulator-5580")
+            return ET.Element("node", {"text": phrase})
+
+        def tap(serial, node):
+            actions.append(node.get("text"))
+
+        responses = iter(["", ""])
+        with patch.object(smoke, "find_node", side_effect=find):
+            with patch.object(smoke, "tap", side_effect=tap):
+                with patch.object(smoke, "require_file") as saved:
+                    with patch.object(smoke, "adb", return_value=""):
+                        smoke.verify_removal_requires_confirmation("emulator-5580")
+        self.assertEqual(
+            ["Saved (1)", "Remove favorite", "Keep saved", "Remove favorite",
+             "Remove offline copy"],
+            actions
+        )
+        saved.assert_called_once_with("emulator-5580")
+
     def test_ignores_transient_malformed_xml(self):
         with patch.object(smoke, "adb", side_effect=["dump complete", "<hierarchy>"]):
             with self.assertRaises(RuntimeError) as error:
