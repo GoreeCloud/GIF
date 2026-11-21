@@ -1,6 +1,7 @@
 package com.goreecloud.gifs.data
 
 import android.content.Context
+import android.net.Uri
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -29,6 +30,26 @@ class FavoritesStore(private val context: Context, private val mediaFiles: Media
                 }
             }.getOrDefault(emptyList())
         }
+
+    /**
+     * Import an explicitly selected local document as an offline favorite.
+     * Roll back the private file if saving its index fails.
+     */
+    suspend fun importFromUri(uri: Uri): MediaItem = mutex.withLock {
+        val current = items.first()
+        val imported = mediaFiles.importFromUri(uri)
+        try {
+            context.favoritesDataStore.edit { prefs ->
+                prefs[key] = JSONArray().apply {
+                    (current + imported).forEach { put(it.toJson()) }
+                }.toString()
+            }
+        } catch (error: Exception) {
+            mediaFiles.removeFavorite(imported)
+            throw error
+        }
+        imported
+    }
 
     /** Returns true if the item is now favorited, false if removed. */
     suspend fun toggle(item: MediaItem): Boolean = mutex.withLock {
