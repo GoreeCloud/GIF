@@ -1,16 +1,22 @@
 package com.goreecloud.gifs.ui
 
 import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,6 +24,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,35 +34,102 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import coil3.compose.AsyncImage
+import com.goreecloud.gifs.data.IncomingMediaPolicy
+import com.goreecloud.gifs.data.MediaAttribution
 import com.goreecloud.gifs.data.MediaItem
 import com.goreecloud.gifs.data.MediaKind
+import com.goreecloud.gifs.data.SavedFileNames
+import com.goreecloud.gifs.data.SavedOrder
+import com.goreecloud.gifs.data.SavedGallery
+import com.goreecloud.gifs.data.SavedKind
+import com.goreecloud.gifs.data.PickerPolicy
 import com.goreecloud.gifs.data.SourcePolicy
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val vm: GalleryViewModel by viewModels()
+    private val importPicker = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            lifecycleScope.launch {
+                try {
+                    val item = vm.importFromUri(uri)
+                    vm.showMessage("Imported " + item.title + " to Saved")
+                } catch (error: Exception) {
+                    vm.showMessage(error.message ?: "Unable to import this image.")
+                }
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val requestedMime = if (intent?.action == Intent.ACTION_GET_CONTENT) intent.type?.lowercase() else null
+        if (intent?.action == Intent.ACTION_GET_CONTENT &&
+            !PickerPolicy.isSupported(requestedMime)) {
+            setResult(RESULT_CANCELED)
+            finish()
+            return
+        }
         setContent {
             GoreeCloudTheme {
                 GalleryScreen(
                     viewModel = vm,
                     onShare = { item -> send(item) },
-                    onSource = { url -> openSource(url) }
+                    onSource = { url -> openSource(url) },
+                    onImport = { importPicker.launch(arrayOf("image/gif", "image/png")) },
+                    onPick = if (requestedMime != null) {
+                        { item: MediaItem -> pick(item, requestedMime) }
+                    } else null,
+                    requestedMime = requestedMime
                 )
             }
         }
+        // Do not re-import the original share when Android recreates our activity.
+        if (savedInstanceState == null) receiveSharedImage(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        receiveSharedImage(intent)
+    }
+
+    private fun receiveSharedImage(incoming: Intent?) {
+        if (incoming?.action != Intent.ACTION_SEND) return
+        @Suppress("DEPRECATION")
+        val stream = incoming.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+        // Some senders include both EXTRA_STREAM and ClipData. Decline
+        // multiple-item or conflicting sources rather than silently taking one.
+        val clipCount = incoming.clipData?.itemCount ?: 0
+        val clipUri = incoming.clipData?.takeIf { it.itemCount == 1 }?.getItemAt(0)?.uri
+        val uri = stream ?: clipUri
+        val sourcesAgree = stream == null || clipUri == null || stream == clipUri
+        if (!IncomingMediaPolicy.accepts(
+                incoming.action, incoming.type, uri?.scheme, uri?.authority,
+                clipItemCount = clipCount, uriSourcesAgree = sourcesAgree
+            )
+        ) {
+            vm.showMessage("Only a shared GIF or PNG file can be saved.")
+            return
+        }
+        val safeUri = uri ?: return
+        // Even explicit Android intents can be forged by another app: require an
+        // in-app confirmation before opening the provided content URI.
+        vm.offerSharedUri(safeUri)
     }
 
     private fun send(item: MediaItem) {
@@ -77,6 +151,27 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun pick(item: MediaItem, requestedMime: String) {
+        if (!PickerPolicy.accepts(requestedMime, item)) {
+            vm.showMessage("This app requested a different image format.")
+            return
+        }
+        lifecycleScope.launch {
+            try {
+                val uri = vm.shareUri(item)
+                val result = Intent().apply {
+                    setDataAndType(uri, item.mimeType)
+                    clipData = ClipData.newUri(contentResolver, item.title, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                setResult(RESULT_OK, result)
+                finish()
+            } catch (error: Exception) {
+                vm.showMessage(error.message ?: "Unable to provide this image.")
+            }
+        }
+    }
+
     private fun openSource(url: String) {
         if (!SourcePolicy.isSafeHttps(url)) return
         startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
@@ -88,25 +183,49 @@ class MainActivity : ComponentActivity() {
 private fun GalleryScreen(
     viewModel: GalleryViewModel,
     onShare: (MediaItem) -> Unit,
-    onSource: (String) -> Unit
+    onSource: (String) -> Unit,
+    onImport: () -> Unit,
+    onPick: ((MediaItem) -> Unit)?,
+    requestedMime: String?
 ) {
     val results by viewModel.results.collectAsStateWithLifecycle()
     val favorites by viewModel.favorites.collectAsStateWithLifecycle()
     val loading by viewModel.loading.collectAsStateWithLifecycle()
+    val loadingMore by viewModel.loadingMore.collectAsStateWithLifecycle()
+    val hasMore by viewModel.hasMore.collectAsStateWithLifecycle()
+    val searchError by viewModel.searchError.collectAsStateWithLifecycle()
     val error by viewModel.message.collectAsStateWithLifecycle()
+    val lastImportedId by viewModel.lastImportedId.collectAsStateWithLifecycle()
+    val pendingSharedUri by viewModel.pendingSharedUri.collectAsStateWithLifecycle()
+    var savingSharedImage by remember { mutableStateOf(false) }
     var tab by rememberSaveable { mutableIntStateOf(0) }
-    var type by rememberSaveable { mutableStateOf(MediaKind.GIF.name) }
-    var query by rememberSaveable { mutableStateOf("") }
+    var type by rememberSaveable {
+        mutableStateOf(PickerPolicy.defaultKind(requestedMime).name)
+    }
+    var exploreQuery by rememberSaveable { mutableStateOf("") }
+    var savedQuery by rememberSaveable { mutableStateOf("") }
+    var savedFilter by rememberSaveable { mutableStateOf(SavedKind.ALL.name) }
+    var savedOrder by rememberSaveable { mutableStateOf(SavedOrder.RECENT.name) }
+    val query = if (tab == 0) exploreQuery else savedQuery
     var selected by remember { mutableStateOf<MediaItem?>(null) }
     var busyId by remember { mutableStateOf<String?>(null) }
     val kind = MediaKind.valueOf(type)
     val uiScope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
+    val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
 
-    LaunchedEffect(query, type, tab) {
+    LaunchedEffect(exploreQuery, type, tab) {
         if (tab == 0) {
-            delay(if (query.isBlank()) 0 else 400)
-            viewModel.search(query, kind)
+            delay(if (exploreQuery.isBlank()) 0 else 400)
+            viewModel.search(exploreQuery, kind)
+        }
+    }
+    LaunchedEffect(lastImportedId) {
+        if (lastImportedId != null) {
+            tab = 1
+            savedQuery = ""
+            savedFilter = SavedKind.ALL.name
         }
     }
     LaunchedEffect(error) {
@@ -116,8 +235,13 @@ private fun GalleryScreen(
         }
     }
 
-    val shown = if (tab == 0) results else favorites.filter {
-        query.isBlank() || it.title.contains(query, ignoreCase = true)
+    val shown = if (tab == 0) {
+        results.filter { requestedMime == null || PickerPolicy.accepts(requestedMime, it) }
+    } else {
+        SavedGallery.filter(
+            favorites, savedQuery, SavedKind.valueOf(savedFilter), requestedMime,
+            order = SavedOrder.valueOf(savedOrder)
+        )
     }
     val favoriteIds = favorites.map { it.id }.toSet()
 
@@ -133,14 +257,29 @@ private fun GalleryScreen(
             } finally { busyId = null }
         }
     }
+    fun copyAttribution(item: MediaItem) {
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        if (clipboard == null) {
+            uiScope.launch { snackbar.showSnackbar("Clipboard unavailable") }
+            return
+        }
+        clipboard.setPrimaryClip(ClipData.newPlainText(
+            "Media attribution", MediaAttribution.text(item)
+        ))
+        uiScope.launch { snackbar.showSnackbar("Creator, license and source copied") }
+    }
     fun download(item: MediaItem) {
         if (busyId != null) return
         busyId = item.id
         uiScope.launch {
             try {
                 viewModel.download(item)
+                // SnackbarHost is behind the modal sheet; dismiss first so
+                // both download success and failures are actually visible.
+                selected = null
                 snackbar.showSnackbar("Saved to Pictures / GoreeCloud GIFs")
             } catch (e: Exception) {
+                selected = null
                 snackbar.showSnackbar(e.message ?: "Could not save this image.")
             } finally { busyId = null }
         }
@@ -184,7 +323,8 @@ private fun GalleryScreen(
                     Column(Modifier.weight(1f)) {
                         Text("GoreeCloud GIF's", style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold)
-                        Text("Find it. Save it. Send it.",
+                        Text(if (onPick != null) "Choose media for another app."
+                             else "Find it. Save it. Send it.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -196,7 +336,11 @@ private fun GalleryScreen(
                 }
                 Spacer(Modifier.height(20.dp))
                 OutlinedTextField(
-                    value = query, onValueChange = { query = it.take(100) },
+                    value = query,
+                    onValueChange = {
+                        if (tab == 0) exploreQuery = it.take(100)
+                        else savedQuery = it.take(100)
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp),
                     singleLine = true,
@@ -204,13 +348,18 @@ private fun GalleryScreen(
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     trailingIcon = {
                         if (query.isNotEmpty()) {
-                            IconButton(onClick = { query = "" }) {
+                            IconButton(onClick = {
+                                if (tab == 0) exploreQuery = "" else savedQuery = ""
+                            }) {
                                 Icon(Icons.Default.Close, contentDescription = "Clear search")
                             }
                         }
                     },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(onSearch = { viewModel.search(query, kind) })
+                    keyboardActions = KeyboardActions(onSearch = {
+                        if (tab == 0) viewModel.search(exploreQuery, kind)
+                        focusManager.clearFocus()
+                    })
                 )
                 if (tab == 0) {
                     Spacer(Modifier.height(14.dp))
@@ -218,14 +367,58 @@ private fun GalleryScreen(
                         FilterChip(
                             selected = kind == MediaKind.GIF,
                             onClick = { type = MediaKind.GIF.name },
+                            enabled = requestedMime == null || requestedMime == "image/*" ||
+                                requestedMime == "image/gif",
                             label = { Text("GIFs") },
                             leadingIcon = { Icon(Icons.Default.Movie, null, Modifier.size(18.dp)) }
                         )
                         FilterChip(
                             selected = kind == MediaKind.STICKER,
                             onClick = { type = MediaKind.STICKER.name },
+                            enabled = requestedMime == null || requestedMime == "image/*" ||
+                                requestedMime == "image/png",
                             label = { Text("Stickers") },
                             leadingIcon = { Icon(Icons.Default.EmojiEmotions, null, Modifier.size(18.dp)) }
+                        )
+                    }
+                } else {
+                    Spacer(Modifier.height(14.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = savedFilter == SavedKind.ALL.name,
+                            onClick = { savedFilter = SavedKind.ALL.name },
+                            label = { Text("All") }
+                        )
+                        FilterChip(
+                            selected = savedFilter == SavedKind.GIF.name,
+                            onClick = { savedFilter = SavedKind.GIF.name },
+                            enabled = requestedMime == null || requestedMime == "image/*" ||
+                                requestedMime == "image/gif",
+                            label = { Text("GIFs") }
+                        )
+                        FilterChip(
+                            selected = savedFilter == SavedKind.STICKER.name,
+                            onClick = { savedFilter = SavedKind.STICKER.name },
+                            enabled = requestedMime == null || requestedMime == "image/*" ||
+                                requestedMime == "image/png",
+                            label = { Text("Stickers") }
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = savedOrder == SavedOrder.RECENT.name,
+                            onClick = { savedOrder = SavedOrder.RECENT.name },
+                            label = { Text("Newest") }
+                        )
+                        FilterChip(
+                            selected = savedOrder == SavedOrder.OLDEST.name,
+                            onClick = { savedOrder = SavedOrder.OLDEST.name },
+                            label = { Text("Oldest") }
+                        )
+                        FilterChip(
+                            selected = savedOrder == SavedOrder.TITLE.name,
+                            onClick = { savedOrder = SavedOrder.TITLE.name },
+                            label = { Text("A–Z") }
                         )
                     }
                 }
@@ -237,6 +430,13 @@ private fun GalleryScreen(
                         style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold
                     )
                     Spacer(Modifier.weight(1f))
+                    if (tab == 1 && onPick == null) {
+                        TextButton(onClick = onImport) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Import")
+                        }
+                    }
                     Text(shown.size.toString() + " items", style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -249,18 +449,37 @@ private fun GalleryScreen(
             if (shown.isEmpty() && !loading) {
                 Box(Modifier.fillMaxSize().padding(30.dp), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(if (tab == 1) Icons.Default.FavoriteBorder else Icons.Default.ImageSearch,
+                        Icon(
+                            if (tab == 1) Icons.Default.FavoriteBorder
+                            else if (searchError != null) Icons.Default.WifiOff
+                            else Icons.Default.ImageSearch,
                             contentDescription = null, modifier = Modifier.size(48.dp),
                             tint = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.height(12.dp))
-                        Text(if (tab == 1) "Nothing saved yet" else "No results found",
-                            style = MaterialTheme.typography.titleMedium)
                         Text(
-                            if (tab == 1) "Tap the heart on a GIF or sticker to keep it offline."
-                            else "Try a different phrase or switch media type.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            if (tab == 1 && favorites.isEmpty()) "Nothing saved yet"
+                            else if (tab == 1) "No matching saved items"
+                            else if (searchError != null) "Search unavailable"
+                            else "No results found",
+                            style = MaterialTheme.typography.titleMedium
                         )
+                        Text(
+                            if (tab == 1 && favorites.isEmpty())
+                                "Tap the heart on a GIF or sticker to keep it offline."
+                            else if (tab == 1) "Try another search or switch the saved media filter."
+                            else searchError ?: "Try a different phrase or switch media type.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                        if (tab == 0 && searchError != null) {
+                            Spacer(Modifier.height(14.dp))
+                            Button(onClick = { viewModel.search(query, kind) }) {
+                                Icon(Icons.Default.Refresh, null, Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Try again")
+                            }
+                        }
                     }
                 }
             } else {
@@ -278,24 +497,94 @@ private fun GalleryScreen(
                             enabled = busyId == null,
                             onSelect = { selected = item },
                             onFavorite = { favorite(item) },
-                            onShare = { onShare(item) }
+                            onShare = { (onPick ?: onShare)(item) },
+                            isPicker = onPick != null
                         )
+                    }
+                    if (tab == 0 && hasMore) {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            Box(Modifier.fillMaxWidth().padding(vertical = 14.dp),
+                                contentAlignment = Alignment.Center) {
+                                OutlinedButton(
+                                    onClick = { viewModel.loadMore() },
+                                    enabled = !loadingMore
+                                ) {
+                                    if (loadingMore) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(18.dp),
+                                            strokeWidth = 2.dp
+                                        )
+                                    } else {
+                                        Icon(Icons.Default.Add, null, Modifier.size(18.dp))
+                                    }
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        if (loadingMore) "Loading more…"
+                                        else if (kind == MediaKind.GIF) "Load more GIFs"
+                                        else "Load more stickers"
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
     }
+    pendingSharedUri?.let { sharedUri ->
+        AlertDialog(
+            onDismissRequest = {
+                if (!savingSharedImage) viewModel.declineSharedUri()
+            },
+            title = { Text("Import shared image?") },
+            text = {
+                Text(
+                    "Copy the shared GIF or PNG into private offline favorites? " +
+                        "The file stays on this device and can be deleted from Saved."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !savingSharedImage,
+                    onClick = {
+                        savingSharedImage = true
+                        uiScope.launch {
+                            try {
+                                val imported = viewModel.acceptSharedUri(sharedUri)
+                                snackbar.showSnackbar("Imported " + imported.title + " to Saved")
+                            } catch (error: Exception) {
+                                snackbar.showSnackbar(error.message ?: "Could not import shared image.")
+                            } finally {
+                                savingSharedImage = false
+                            }
+                        }
+                    }
+                ) { Text(if (savingSharedImage) "Importing…" else "Save offline") }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = !savingSharedImage,
+                    onClick = { viewModel.declineSharedUri() }
+                ) { Text("Cancel") }
+            }
+        )
+    }
     selected?.let { item ->
-        ModalBottomSheet(onDismissRequest = { selected = null },
-            containerColor = MaterialTheme.colorScheme.surface) {
+        ModalBottomSheet(
+            onDismissRequest = { selected = null },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
             MediaDetail(
                 item = item,
                 isFavorite = item.id in favoriteIds,
                 busy = busyId == item.id,
                 onFavorite = { favorite(item) },
-                onShare = { onShare(item) },
+                onShare = { (onPick ?: onShare)(item) },
                 onDownload = { download(item) },
-                onSource = { onSource(item.sourceUrl) }
+                isPicker = onPick != null,
+                onSource = { onSource(item.sourceUrl) },
+                onCopyAttribution = { copyAttribution(item) }
             )
         }
     }
@@ -304,9 +593,10 @@ private fun GalleryScreen(
 @Composable
 private fun MediaPreview(item: MediaItem, modifier: Modifier = Modifier, animate: Boolean = false) {
     val context = LocalContext.current
-    val saved = item.localFile?.let {
-        java.io.File(context.filesDir, "favorites/" + it)
-    }?.takeIf { it.isFile }
+    val saved = item.localFile
+        ?.takeIf { SavedFileNames.matches(item.id, item.kind, it) }
+        ?.let { java.io.File(context.filesDir, "favorites/" + it) }
+        ?.takeIf { it.isFile }
     AsyncImage(
         model = saved ?: if (animate && item.kind == MediaKind.GIF) item.url else item.thumbnail,
         contentDescription = item.title,
@@ -322,7 +612,8 @@ private fun MediaTile(
     enabled: Boolean,
     onSelect: () -> Unit,
     onFavorite: () -> Unit,
-    onShare: () -> Unit
+    onShare: () -> Unit,
+    isPicker: Boolean
 ) {
     Surface(
         shape = RoundedCornerShape(22.dp),
@@ -351,8 +642,11 @@ private fun MediaTile(
                 }
                 IconButton(onClick = onShare, enabled = enabled,
                     modifier = Modifier.size(44.dp)) {
-                    Icon(Icons.AutoMirrored.Filled.Send,
-                        contentDescription = "Share " + item.title)
+                    Icon(
+                        if (isPicker) Icons.Default.CheckCircle
+                        else Icons.AutoMirrored.Filled.Send,
+                        contentDescription = (if (isPicker) "Choose " else "Share ") + item.title
+                    )
                 }
                 IconButton(onClick = onSelect, modifier = Modifier.size(44.dp)) {
                     Icon(Icons.Default.MoreHoriz, contentDescription = "More options for " + item.title)
@@ -370,43 +664,80 @@ private fun MediaDetail(
     onFavorite: () -> Unit,
     onShare: () -> Unit,
     onDownload: () -> Unit,
-    onSource: () -> Unit
+    isPicker: Boolean,
+    onSource: () -> Unit,
+    onCopyAttribution: () -> Unit
 ) {
+    // Put primary actions first, before a potentially tall animated preview.
+    // Scrollable content keeps secondary actions reachable on small screens,
+    // with large accessibility text and in landscape orientation.
     Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).navigationBarsPadding()
-            .padding(bottom = 24.dp),
+        modifier = Modifier.fillMaxWidth()
+            .heightIn(max = 640.dp)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp)
+            .navigationBarsPadding()
+            .padding(bottom = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        MediaPreview(item, Modifier.fillMaxWidth().heightIn(min = 180.dp, max = 280.dp)
-            .clip(RoundedCornerShape(18.dp)), animate = true)
-        Spacer(Modifier.height(14.dp))
-        Text(item.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(6.dp))
-        Text(item.license, style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary)
-        Text(item.credit, style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 3,
-            overflow = TextOverflow.Ellipsis)
-        Spacer(Modifier.height(18.dp))
+        Text(
+            item.title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+        Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = onShare, enabled = !busy, modifier = Modifier.weight(1f)) {
-                Icon(Icons.AutoMirrored.Filled.Send, null, Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp)); Text("Share")
+                Icon(
+                    if (isPicker) Icons.Default.CheckCircle
+                    else Icons.AutoMirrored.Filled.Send,
+                    null, Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(if (isPicker) "Use in app" else "Share")
             }
             Button(onClick = onDownload, enabled = !busy, modifier = Modifier.weight(1f)) {
                 Icon(Icons.Default.Download, null, Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp)); Text("Download")
             }
         }
+        Spacer(Modifier.height(16.dp))
+        MediaPreview(
+            item,
+            Modifier.fillMaxWidth().heightIn(min = 140.dp, max = 185.dp)
+                .clip(RoundedCornerShape(18.dp)),
+            animate = true
+        )
+        Spacer(Modifier.height(12.dp))
+        Text(
+            item.license,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            item.credit,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis
+        )
         TextButton(onClick = onFavorite, enabled = !busy) {
             Icon(if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                 null, Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Text(if (isFavorite) "Remove from favorites" else "Save offline favorite")
         }
-        TextButton(onClick = onSource) {
-            Icon(Icons.Default.OpenInNew, null, Modifier.size(16.dp))
-            Spacer(Modifier.width(6.dp)); Text("View source and licensing")
+        TextButton(onClick = onCopyAttribution) {
+            Icon(Icons.Default.ContentCopy, null, Modifier.size(16.dp))
+            Spacer(Modifier.width(6.dp)); Text("Copy creator and license credit")
+        }
+        if (SourcePolicy.isSafeHttps(item.sourceUrl)) {
+            TextButton(onClick = onSource) {
+                Icon(Icons.AutoMirrored.Filled.OpenInNew, null, Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp)); Text("View source and licensing")
+            }
         }
     }
 }
