@@ -160,6 +160,9 @@ class SmokeHarnessTest(unittest.TestCase):
 
         def fake_find(serial, phrase, **kwargs):
             self.assertEqual("emulator-5580", serial)
+            # Android framework Buttons can expose uppercase text.
+            if phrase in ("Send PNG to GoreeCloud", "Request PNG from GoreeCloud"):
+                self.assertFalse(kwargs.get("exact", False))
             return ET.Element("node", {"text": phrase})
 
         def fake_adb(serial, *args, **kwargs):

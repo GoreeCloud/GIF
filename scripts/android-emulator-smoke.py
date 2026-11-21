@@ -224,7 +224,8 @@ def verify_cross_app_interop(serial, fixture_apk):
 
     # Fixture-owned content:// PNG is shared into GoreeCloud with a temporary
     # Android URI grant and cannot be read without the in-app import consent.
-    tap(serial, find_node(serial, "Send PNG to GoreeCloud", exact=True))
+    # Framework Button labels may render as ALL CAPS; use case-insensitive lookup.
+    tap(serial, find_node(serial, "Send PNG to GoreeCloud"))
     find_node(serial, "Import shared image?", deadline=45)
     tap(serial, find_node(serial, "Save offline", exact=True))
     find_node(serial, "Saved (1)", deadline=70)
@@ -234,7 +235,7 @@ def verify_cross_app_interop(serial, fixture_apk):
     # The separate app requests image/png. It must be able to open the returned
     # GoreeCloud FileProvider URI using only the temporary read grant.
     adb(serial, "shell", "am", "start", "-n", FIXTURE_ACTIVITY)
-    tap(serial, find_node(serial, "Request PNG from GoreeCloud", exact=True, deadline=40))
+    tap(serial, find_node(serial, "Request PNG from GoreeCloud", deadline=40))
     find_node(serial, "GoreeCloud GIF's", deadline=60)
     tap(serial, find_node(serial, "Saved (1)", exact=True, deadline=30))
     # The toolbar also says "Choose media"; select the actual result button.
