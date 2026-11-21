@@ -237,7 +237,8 @@ def verify_cross_app_interop(serial, fixture_apk):
     tap(serial, find_node(serial, "Request PNG from GoreeCloud", exact=True, deadline=40))
     find_node(serial, "GoreeCloud GIF's", deadline=60)
     tap(serial, find_node(serial, "Saved (1)", exact=True, deadline=30))
-    tap(serial, find_node(serial, "Choose ", deadline=35))
+    # The toolbar also says "Choose media"; select the actual result button.
+    tap(serial, find_node(serial, "Choose interop-source", exact=True, deadline=35))
     find_node(serial, "PASS PNG GRANT", deadline=65)
     result = adb(
         serial, "shell", "run-as", FIXTURE_PACKAGE, "cat",

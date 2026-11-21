@@ -176,7 +176,7 @@ class SmokeHarnessTest(unittest.TestCase):
                         smoke.verify_cross_app_interop("emulator-5580", "fixture-debug.apk")
         self.assertIn("Send PNG to GoreeCloud", clicked)
         self.assertIn("Request PNG from GoreeCloud", clicked)
-        self.assertIn("Choose ", clicked)
+        self.assertIn("Choose interop-source", clicked)
         saved.assert_called_once_with("emulator-5580")
         self.assertTrue(any(call.args[1:4] == ("shell", "run-as", smoke.FIXTURE_PACKAGE)
                             for call in adb_mock.call_args_list))
