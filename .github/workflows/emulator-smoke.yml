@@ -3,6 +3,16 @@ name: Android emulator smoke (manual)
 on:
   workflow_dispatch:
     inputs:
+      android_api:
+        description: "Android API level for the isolated emulator (default 36)"
+        required: false
+        type: choice
+        options:
+          - '29'
+          - '33'
+          - '35'
+          - '36'
+        default: '36'
       extended:
         description: "Also test Saved persistence offline and Load more stickers"
         required: false
@@ -21,6 +31,8 @@ jobs:
   android-emulator-smoke:
     runs-on: ubuntu-24.04
     timeout-minutes: 35
+    env:
+      TEST_ANDROID_API: ${{ inputs.android_api || '36' }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -33,21 +45,22 @@ jobs:
           cache-dependency-path: |
             **/*.gradle.kts
             gradle/wrapper/gradle-wrapper.properties
-      - name: Install Android 36 emulator and SDK 37
+      - name: Install selected Android emulator and SDK 37
         shell: bash
         run: |
           SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
           SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -path '*/bin/sdkmanager' | sort -V | tail -1)"
           test -x "$SDKMANAGER"
+          case "$TEST_ANDROID_API" in 29|33|35|36) ;; *) echo "Unsupported emulator API"; exit 1;; esac
           # Process substitution avoids SIGPIPE from `yes` failing under `pipefail`.
           "$SDKMANAGER" --licenses < <(yes) >/dev/null
-          "$SDKMANAGER" "platforms;android-37.0" "build-tools;36.0.0" "platforms;android-36" "emulator" "system-images;android-36;default;x86_64"
+          "$SDKMANAGER" "platforms;android-37.0" "build-tools;36.0.0" "platforms;android-$TEST_ANDROID_API" "emulator" "system-images;android-$TEST_ANDROID_API;default;x86_64"
           echo "$SDK_ROOT/emulator" >> "$GITHUB_PATH"
           echo "$SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
           echo "$(dirname "$SDKMANAGER")" >> "$GITHUB_PATH"
       - name: Build app and run unit tests
         run: ./gradlew --no-daemon --console=plain :app:testDebugUnitTest :app:assembleDebug
-      - name: Run headless isolated Android 36 emulator
+      - name: Run headless isolated selected Android emulator
         shell: bash
         run: |
           SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
@@ -58,10 +71,10 @@ jobs:
           export ANDROID_AVD_HOME="$RUNNER_TEMP/goreecloud-avds"
           mkdir -p "$ANDROID_AVD_HOME"
           AVD_DIR="$ANDROID_AVD_HOME/GoreeCloudGIFSmoke.avd"
-          "$AVDMANAGER" create avd -n GoreeCloudGIFSmoke -k 'system-images;android-36;default;x86_64' --device 'pixel_5' --force --path "$AVD_DIR" < <(printf 'no\n')
+          "$AVDMANAGER" create avd -n GoreeCloudGIFSmoke -k "system-images;android-$TEST_ANDROID_API;default;x86_64" --device 'pixel_5' --force --path "$AVD_DIR" < <(printf 'no\n')
           test -f "$AVD_DIR/config.ini" || { echo "AVD configuration missing: $AVD_DIR/config.ini"; exit 1; }
           printf '\nhw.ramSize=1536M\ndisk.dataPartition.size=2048M\nsdcard.size=128 MB\n' >> "$AVD_DIR/config.ini"
-          echo "Using AVD at $AVD_DIR"
+          echo "Using AVD at $AVD_DIR (Android API $TEST_ANDROID_API)"
           if [ -e /dev/kvm ]; then sudo chmod 666 /dev/kvm; fi
           "$SDK_ROOT/emulator/emulator" -avd GoreeCloudGIFSmoke -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -memory 1536 -port 5580 > "$RUNNER_TEMP/gif-emulator.log" 2>&1 &
           EMULATOR_PID=$!
