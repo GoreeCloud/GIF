@@ -36,7 +36,7 @@ jobs:
           python3 -m py_compile scripts/android-emulator-smoke.py
           python3 -m unittest discover -s scripts -p 'test_*.py' -v
       - name: Validate unit tests, Android lint and APK build
-        run: ./gradlew --no-daemon --console=plain :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+        run: ./gradlew --no-daemon --console=plain :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :interop-fixture:assembleDebug
       - name: Record APK SHA-256 checksum
         run: |
           cd app/build/outputs/apk/debug

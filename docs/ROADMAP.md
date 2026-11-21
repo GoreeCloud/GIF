@@ -8,7 +8,7 @@
 - Initial automated tests, build workflows and security bounds.
 
 ## Next development priorities (not implemented)
-1. Repeat the now-passing eight-step optional emulator acceptance on protected main; add third-party share/picker/import acceptance and independently verify physical-device behavior and downloaded file integrity.
+1. Repeat the now-passing nine-step emulator acceptance on protected main; run the new isolated external-app PNG share/pick fixture in the optional 11-step workflow, then independently verify real third-party clients, physical-device behavior and byte-for-byte downloaded file integrity.
 2. Validate bounded retry/backoff for anonymous Openverse search, and improve Coil thumbnail disk-cache limits and relevance; temporary share-cache quota and GIF/sticker pagination are implemented in development source.
 3. Verify clipboard attribution behavior on supported devices; improve content rights guidance and media-specific license notices.
 4. Extend Saved type filters and safe deletion confirmations with sticker packs, collections, search refinements, encrypted backup/export and media organization.

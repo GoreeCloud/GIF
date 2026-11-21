@@ -6,7 +6,8 @@
 
 - Required `Android` workflow: Android SDK 37 compile, unit tests, Android lint, debug APK, SHA-256 verification and seven-day artifact.
 - Manual `Android emulator smoke (manual)` workflow: isolated Android 36 x86_64 emulator with shell-only ADB. Default tests six core steps. Optional `extended=true` verifies offline private Saved persistence after app restart and sticker pagination from 60 to 120 items; this passed on protected main in run #44872648959. With `verify_removal=true`, a ninth step checks canceling deletion preserves the private file and confirmed deletion removes it; this passed on feature-branch run #44872989620. The test never targets a physical phone.
-- Host-side Python tests run on every `Android` CI check to exercise the accessibility-UI retry and coordinate logic without booting a device.
+- Host-side Python tests run on every `Android` CI check to exercise accessibility-UI retry and coordinate logic without booting a device. The separately compiled `qa/interop-fixture` debug APK is not uploaded as the consumer release artifact.
+- An optional `verify_interop=true` input (with `extended=true` and `verify_removal=true`) adds a two-stage cross-app PNG acceptance: a different app's grant-scoped `ACTION_SEND` import and that app's `ACTION_GET_CONTENT` read of the returned GoreeCloud URI. This **has not passed on the emulator until a live run reports success**.
 - Passing unit tests or a booted emulator **does not** prove actual on-device downloads, animated GIF behavior, other-app integration, or accessibility compliance.
 
 ## Independent cloud-emulator runs

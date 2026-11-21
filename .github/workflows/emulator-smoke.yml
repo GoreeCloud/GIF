@@ -13,6 +13,11 @@ on:
         required: false
         type: boolean
         default: false
+      verify_interop:
+        description: "With extended=true and verify_removal=true, test real cross-app PNG send and pick"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -46,7 +51,7 @@ jobs:
           echo "$SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
           echo "$(dirname "$SDKMANAGER")" >> "$GITHUB_PATH"
       - name: Build app and run unit tests
-        run: ./gradlew --no-daemon --console=plain :app:testDebugUnitTest :app:assembleDebug
+        run: ./gradlew --no-daemon --console=plain :app:testDebugUnitTest :app:assembleDebug :interop-fixture:assembleDebug
       - name: Run headless isolated Android 36 emulator
         shell: bash
         run: |
@@ -69,6 +74,9 @@ jobs:
           EXTRA=()
           if [ "${{ inputs.extended }}" = "true" ]; then EXTRA+=(--extended); fi
           if [ "${{ inputs.verify_removal }}" = "true" ]; then EXTRA+=(--verify-removal); fi
+          if [ "${{ inputs.verify_interop }}" = "true" ]; then
+            EXTRA+=(--verify-interop --fixture-apk qa/interop-fixture/build/outputs/apk/debug/interop-fixture-debug.apk)
+          fi
           python3 scripts/android-emulator-smoke.py --serial emulator-5580 --apk app/build/outputs/apk/debug/app-debug.apk "${EXTRA[@]}"
       - name: Upload isolated emulator diagnostics on failure
         if: failure()

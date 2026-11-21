@@ -48,7 +48,7 @@ The first-party app source is **MIT** (see LICENSE). The bundled OpenMoji catalo
 
 Openverse is a public external service subject to availability and anonymous rate limits. Direct GIF URLs are hosted by third-party sources. GIFs exceeding 25 MiB, non-HTTPS links, local/reserved IP resolutions, download redirects and unexpected formats are rejected. Image previews use a separate HTTPS-only redirect policy with public DNS checks. Content is not uploaded to GoreeCloud.
 
-See [Architecture](docs/ARCHITECTURE.md), [Features](docs/FEATURES.md), [Objectives](docs/OBJECTIVES.md), [Roadmap](docs/ROADMAP.md), [Security](SECURITY.md) and the [CLI command reference](docs/CLI-COMMANDS.md).
+See [Architecture](docs/ARCHITECTURE.md), [Features](docs/FEATURES.md), [Objectives](docs/OBJECTIVES.md), [Roadmap](docs/ROADMAP.md), [Security](SECURITY.md), the [CLI command reference](docs/CLI-COMMANDS.md) and the [test-only external Android app](qa/interop-fixture/README.md).
 
 ## Ecosystem obligations
 
