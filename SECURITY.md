@@ -10,6 +10,7 @@ This project is a development alpha, not a production-hardened service. Please r
 - Media revalidation before sharing/exporting: app-private favorites that fail GIF/PNG signature or size validation produce an actionable error and are never silently deleted. Invalid temporary cache is replaced; only files in cache/shares are eligible for quota eviction.
 - Persisted local favorite filenames must exactly match the SHA-256-derived identifier and GIF/PNG extension expected for that media record; malformed paths cannot direct previews outside the private favorites directory.
 - Scoped MediaStore exports are treated as successful only after the source byte count was copied and the row was published; incomplete/failed transactions attempt to delete the pending row without masking the original error.
+- Unreadable or partially malformed DataStore favorite indexes fail closed rather than silently becoming empty; the app surfaces a persistent Saved warning and prevents overwriting those records. A failed index write attempts to roll back only a newly created favorite, not preexisting user media.
 - App-private favorites; explicitly permissioned temporary Android content URI sharing. `ACTION_GET_CONTENT` responses require an explicit item choice, restrict GIF/PNG MIME types and grant only temporary read access to the selected item.
 - Gradle and dependency versions pinned; source review and CI remain ongoing.
 

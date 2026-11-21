@@ -6,13 +6,10 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import org.json.JSONArray
-import java.io.IOException
 
 private val Context.favoritesDataStore by preferencesDataStore(name = "favorite_media")
 
@@ -21,15 +18,7 @@ class FavoritesStore(private val context: Context, private val mediaFiles: Media
     private val mutex = Mutex()
 
     val items: Flow<List<MediaItem>> = context.favoritesDataStore.data
-        .catch { if (it is IOException) emit(androidx.datastore.preferences.core.emptyPreferences()) else throw it }
-        .map { prefs ->
-            runCatching {
-                val json = JSONArray(prefs[key] ?: "[]")
-                (0 until json.length()).mapNotNull { n ->
-                    json.optJSONObject(n)?.let(MediaItem::fromJson)
-                }
-            }.getOrDefault(emptyList())
-        }
+        .map { prefs -> SavedIndexCodec.decode(prefs[key] ?: "[]") }
 
     /**
      * Import an explicitly selected local document as an offline favorite.
@@ -40,12 +29,11 @@ class FavoritesStore(private val context: Context, private val mediaFiles: Media
         val imported = mediaFiles.importFromUri(uri)
         try {
             context.favoritesDataStore.edit { prefs ->
-                prefs[key] = JSONArray().apply {
-                    (current + imported).forEach { put(it.toJson()) }
-                }.toString()
+                prefs[key] = SavedIndexCodec.encode(current + imported)
             }
         } catch (error: Exception) {
-            mediaFiles.removeFavorite(imported)
+            // Do not mask the index write error if removing the staged image fails.
+            try { mediaFiles.removeFavorite(imported) } catch (_: Exception) { }
             throw error
         }
         imported
@@ -58,18 +46,23 @@ class FavoritesStore(private val context: Context, private val mediaFiles: Media
         if (existing != null) {
             context.favoritesDataStore.edit { prefs ->
                 val remaining = current.filterNot { it.id == item.id }
-                prefs[key] = JSONArray().apply {
-                    remaining.forEach { put(it.toJson()) }
-                }.toString()
+                prefs[key] = SavedIndexCodec.encode(remaining)
             }
             mediaFiles.removeFavorite(existing)
             false
         } else {
+            val previouslyPresent = mediaFiles.hasFavoriteFile(item)
             val offline = mediaFiles.favorite(item)
-            context.favoritesDataStore.edit { prefs ->
-                prefs[key] = JSONArray().apply {
-                    (current + offline).forEach { put(it.toJson()) }
-                }.toString()
+            try {
+                context.favoritesDataStore.edit { prefs ->
+                    prefs[key] = SavedIndexCodec.encode(current + offline)
+                }
+            } catch (error: Exception) {
+                // Never delete an older, unindexed file during rollback.
+                if (!previouslyPresent) {
+                    try { mediaFiles.removeFavorite(offline) } catch (_: Exception) { }
+                }
+                throw error
             }
             true
         }

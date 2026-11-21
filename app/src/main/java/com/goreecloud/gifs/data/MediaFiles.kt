@@ -163,6 +163,10 @@ class MediaFiles(private val context: Context, private val client: OkHttpClient)
         item.copy(localFile = destination.name)
     }
 
+    suspend fun hasFavoriteFile(item: MediaItem): Boolean = withContext(Dispatchers.IO) {
+        favoriteFile(item).isFile
+    }
+
     suspend fun removeFavorite(item: MediaItem) = withContext(Dispatchers.IO) {
         favoriteFile(item).delete()
     }
