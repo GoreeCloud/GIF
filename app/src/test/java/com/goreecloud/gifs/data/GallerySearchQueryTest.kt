@@ -9,9 +9,9 @@ class GallerySearchQueryTest {
         assertEquals("", GallerySearchQuery.normalize("  \t  ", MediaKind.STICKER))
     }
 
-    @Test fun gifSearchKeepsExistingDefault() {
-        assertEquals("reaction", GallerySearchQuery.normalize("  ", MediaKind.GIF))
-        assertEquals("reaction", GallerySearchQuery.normalize("", MediaKind.GIF))
+    @Test fun emptyGifSearchNeverInventsAnAutomaticRemoteQuery() {
+        assertEquals("", GallerySearchQuery.normalize("  ", MediaKind.GIF))
+        assertEquals("", GallerySearchQuery.normalize("", MediaKind.GIF))
     }
 
     @Test fun explicitQueriesAreTrimmedButNotReplaced() {

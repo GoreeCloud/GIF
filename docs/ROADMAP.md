@@ -2,7 +2,7 @@
 
 ## Implemented in development source
 - Native Android Jetpack Compose app and local app-only navigation.
-- Openverse GIF search with licensing attribution.
+- Explicit-submit Openverse GIF search (no query sent on launch or while typing), with licensing attribution.
 - Searchable OpenMoji catalog indexed from a pinned, bundled data snapshot.
 - Save favorites offline, explicitly import local GIF/PNG or receive shared media into private favorites, share MIME-correct content URIs, export to MediaStore, and respond to single-image `ACTION_GET_CONTENT` pickers.
 - Initial automated tests, build workflows and security bounds.
