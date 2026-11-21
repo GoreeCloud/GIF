@@ -10,7 +10,7 @@
 ## Next development priorities (not implemented)
 1. Nine-step emulator acceptance passed independently on Android APIs 29, 33, 35 and 36; repeat after subsequent merges and test external-app share/picker, authorized physical-device behavior and byte-for-byte downloaded file integrity.
 2. Validate real-network retry/backoff and improve search relevance. A bounded 64 MiB app-private Coil preview disk cache, temporary share-cache quota and GIF/sticker pagination are implemented in development source; validate disk pressure and eviction on devices.
-3. Verify clipboard attribution behavior on supported devices; improve content rights guidance and media-specific license notices.
+3. Verify clipboard attribution and contextual media-rights notices on actual devices; obtain human legal/licensing review for any reuse guidance before release.
 4. Extend Saved type filters and safe deletion confirmations with sticker packs, collections, search refinements, encrypted backup/export and media organization.
 5. Audit inclusive design, screen reader controls, RTL, tablet layouts and automated image UI tests.
 6. Add optional self-hosted source adapters behind user consent and explicit endpoint trust.
