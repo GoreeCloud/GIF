@@ -12,7 +12,7 @@
 
 **Personal media import:** the user explicitly selects a GIF or PNG from Android's `ACTION_OPEN_DOCUMENT` system picker -> the app reads only the granted `content://` URI -> streams up to 25 MiB into a temporary private file -> checks image magic bytes -> atomically renames under app-private `files/favorites` -> records the local file in DataStore. If the index write fails, the import is rolled back. No persistent document-provider grant or upload is used.
 
-**Build toolchain:** Android Gradle Plugin 9.5.1 and Kotlin Compose plugin 2.4.21 passed CI and branch-level emulator testing, and were merged through PR #46. Release signing and physical-device acceptance remain separate gates.
+**Build toolchain:** Android Gradle Plugin 9.5.1 and Kotlin Compose plugin 2.4.21 passed CI and branch-level emulator testing against Gradle 9.7.1, then merged through PR #46. Release signing and physical-device acceptance remain separate gates.
 
 **External app acceptance:** The test-only `qa/interop-fixture` APK has no network permission and uses a different Android UID. It grants read access to a generated PNG for `ACTION_SEND`; the main app requires in-app confirmation before import. For `ACTION_GET_CONTENT`, the fixture opens the returned GoreeCloud FileProvider URI through ContentResolver to verify temporary cross-UID access and PNG type. Only isolated Android emulators run this optional QA; actual external-client and physical-device acceptance remain open.
 
