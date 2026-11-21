@@ -16,6 +16,8 @@
 
 **CI reliability:** Android and manually triggered emulator workflows use GitHub's maintained Checkout v7 and Setup Java v6 actions on hosted runners. Checkout does not persist GitHub credentials because these jobs only read source. The official Java setup action's Gradle dependency cache is keyed by committed Gradle configuration/wrapper metadata. Caching is a performance aid, not a substitute for dependency version pinning, checksum integrity, build tests or release acceptance. SDK license input avoids `yes` SIGPIPE under Bash `pipefail`.
 
+**HTTP compatibility:** OkHttp 5.5.1 is proposed on the verified Kotlin/AGP/Coil toolchain. CI and isolated-emulator tests must confirm that custom public-only DNS filtering, explicit-download no-redirect behavior, and Coil HTTPS-only previews continue working before merge.
+
 **Controls:** no HTTP cleartext, external URL validation plus a public-address-only DNS resolver, no redirects for explicit GIF/PNG acquisition, HTTPS-only redirects for Coil previews to public hosts, bounded 25 MiB downloads, magic byte checks (GIF/PNG), temporary files with atomic rename, no executable extensions, no analytics and no background network scanning.
 
 **MIPS:** GC UI token values manually mapped from gc-ui (alpha Iris); GoreeShield maps to local-first data/explicit external fetches; Wardveil maps to input/media/transport restrictions; Mesh and Identity have no runtime dependencies. Full platform integrations and release-level verification are not yet complete.
