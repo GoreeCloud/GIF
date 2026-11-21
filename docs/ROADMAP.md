@@ -8,8 +8,8 @@
 - Initial automated tests, build workflows and security bounds.
 
 ## Next development priorities (not implemented)
-1. Nine-step emulator acceptance passed independently on Android APIs 29, 33, 35 and 36. Verify the newly added external-app PNG share/pick fixture using optional 11-step acceptance, then test representative real third-party apps, the connected physical device with authorization, and byte-for-byte downloaded file integrity.
-2. Validate bounded retry/backoff for anonymous Openverse search, and improve Coil thumbnail disk-cache limits and relevance; temporary share-cache quota and GIF/sticker pagination are implemented in development source.
+1. Nine-step emulator acceptance passed independently on Android APIs 29, 33, 35 and 36. Verify the external-app PNG share/pick fixture in optional 11-step acceptance; then check real third-party clients, authorized physical-device behavior and byte-for-byte downloaded file integrity.
+2. Validate real-network Openverse retry/backoff and improve relevance. A 64 MiB bounded app-private Coil preview disk cache, temporary share-cache quota and GIF/sticker pagination are implemented in development source; device disk-pressure acceptance remains open.
 3. Verify clipboard attribution behavior on supported devices; improve content rights guidance and media-specific license notices.
 4. Extend Saved type filters and safe deletion confirmations with sticker packs, collections, search refinements, encrypted backup/export and media organization.
 5. Audit inclusive design, screen reader controls, RTL, tablet layouts and automated image UI tests.
