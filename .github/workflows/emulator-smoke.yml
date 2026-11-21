@@ -1,0 +1,77 @@
+name: Android emulator smoke (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      extended:
+        description: "Also test Saved persistence offline and Load more stickers"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  android-emulator-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+          cache-dependency-path: |
+            **/*.gradle.kts
+            gradle/wrapper/gradle-wrapper.properties
+      - name: Install Android 36 emulator and SDK 37
+        shell: bash
+        run: |
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -path '*/bin/sdkmanager' | sort -V | tail -1)"
+          test -x "$SDKMANAGER"
+          # Process substitution avoids SIGPIPE from `yes` failing under `pipefail`.
+          "$SDKMANAGER" --licenses < <(yes) >/dev/null
+          "$SDKMANAGER" "platforms;android-37.0" "build-tools;36.0.0" "platforms;android-36" "emulator" "system-images;android-36;default;x86_64"
+          echo "$SDK_ROOT/emulator" >> "$GITHUB_PATH"
+          echo "$SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
+          echo "$(dirname "$SDKMANAGER")" >> "$GITHUB_PATH"
+      - name: Build app and run unit tests
+        run: ./gradlew --no-daemon --console=plain :app:testDebugUnitTest :app:assembleDebug
+      - name: Run headless isolated Android 36 emulator
+        shell: bash
+        run: |
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          AVDMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -path '*/bin/avdmanager' | sort -V | tail -1)"
+          test -x "$AVDMANAGER"
+          # The hosted runner can override $HOME/.android/avd; select an explicit
+          # location and fail with a clear error if avdmanager did not create it.
+          export ANDROID_AVD_HOME="$RUNNER_TEMP/goreecloud-avds"
+          mkdir -p "$ANDROID_AVD_HOME"
+          AVD_DIR="$ANDROID_AVD_HOME/GoreeCloudGIFSmoke.avd"
+          "$AVDMANAGER" create avd -n GoreeCloudGIFSmoke -k 'system-images;android-36;default;x86_64' --device 'pixel_5' --force --path "$AVD_DIR" < <(printf 'no\n')
+          test -f "$AVD_DIR/config.ini" || { echo "AVD configuration missing: $AVD_DIR/config.ini"; exit 1; }
+          printf '\nhw.ramSize=1536M\ndisk.dataPartition.size=2048M\nsdcard.size=128 MB\n' >> "$AVD_DIR/config.ini"
+          echo "Using AVD at $AVD_DIR"
+          if [ -e /dev/kvm ]; then sudo chmod 666 /dev/kvm; fi
+          "$SDK_ROOT/emulator/emulator" -avd GoreeCloudGIFSmoke -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -memory 1536 -port 5580 > "$RUNNER_TEMP/gif-emulator.log" 2>&1 &
+          EMULATOR_PID=$!
+          trap 'adb -s emulator-5580 emu kill >/dev/null 2>&1 || true; kill "$EMULATOR_PID" >/dev/null 2>&1 || true' EXIT
+          EXTRA=()
+          if [ "${{ inputs.extended }}" = "true" ]; then EXTRA+=(--extended); fi
+          python3 scripts/android-emulator-smoke.py --serial emulator-5580 --apk app/build/outputs/apk/debug/app-debug.apk "${EXTRA[@]}"
+      - name: Upload isolated emulator diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emulator-qa-diagnostics
+          path: |
+            ${{ runner.temp }}/gif-emulator.log
+            ${{ runner.temp }}/gif-smoke-failure.png
+            ${{ runner.temp }}/gif-smoke-hierarchy.xml
+          if-no-files-found: ignore
+          retention-days: 3

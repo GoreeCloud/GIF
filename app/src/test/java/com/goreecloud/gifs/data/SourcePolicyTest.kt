@@ -19,7 +19,8 @@ class SourcePolicyTest {
     @Test fun metadataRoundTrip() {
         val value = MediaItem("openmoji:1F600", "Smile", MediaKind.STICKER,
             "https://example.org/img.png", "https://example.org/thumb.png",
-            "OpenMoji", "https://example.org", "CC BY-SA 4.0", "abc.png")
+            "OpenMoji", "https://example.org", "CC BY-SA 4.0",
+            SavedFileNames.expected("openmoji:1F600", MediaKind.STICKER))
         assertEquals(value, MediaItem.fromJson(value.toJson()))
     }
 }

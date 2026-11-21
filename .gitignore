@@ -19,3 +19,7 @@ captures/
 
 # Kotlin compiler session markers
 .kotlin/
+
+# Host-side emulator QA test artifacts
+__pycache__/
+*.pyc
