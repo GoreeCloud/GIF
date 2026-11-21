@@ -5,7 +5,7 @@
 | GIF search and pagination | Implemented via anonymous Openverse JSON adapter (20/page); status errors show retry | Device/network and load-more acceptance |
 | Sticker search with local pagination | Pinned local OpenMoji metadata, multi-term filtering and bounded 60-item pages with Load more and consistent empty-query pagination; no network requests for sticker search | Catalog coverage and large-result-set UI acceptance |
 | GIF preview | Implemented with Coil GIF renderer | Real-device animation and memory testing |
-| Local favorites and saved filters | Implemented with Android DataStore/private files and independent Saved search, type filters and Newest/Oldest/A–Z ordering | Restart/offline/low-storage and UI acceptance |
+| Local favorites and saved filters | Android DataStore/private files, independent Saved search/filter/sorting, loss-preventing index decoding and rollback of newly written favorites on failed index updates | Corrupt-index UI, restart/offline/low-storage and physical-device acceptance |
 | User-selected local GIF/PNG imports and received shares | SAF OpenDocument picker or confirmed single-image ACTION_SEND share, strict MIME/URI validation with multiple/conflicting share-source rejection, 25 MiB bound, GIF/PNG signature, dimensions and PNG IHDR CRC checks, and app-private copy; no persistable grant | Provider permissions, invalid files, recreation, storage and cross-app acceptance |
 | Share to other apps | Implemented with FileProvider and ACTION_SEND | Target apps and URI grant tests |
 | Pick GIF/PNG from requesting apps | Single-item Android ACTION_GET_CONTENT activity integration with MIME validation and temporary read grant | Caller integration/device tests |

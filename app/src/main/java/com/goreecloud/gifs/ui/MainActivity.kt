@@ -190,6 +190,7 @@ private fun GalleryScreen(
 ) {
     val results by viewModel.results.collectAsStateWithLifecycle()
     val favorites by viewModel.favorites.collectAsStateWithLifecycle()
+    val favoritesError by viewModel.favoritesError.collectAsStateWithLifecycle()
     val loading by viewModel.loading.collectAsStateWithLifecycle()
     val loadingMore by viewModel.loadingMore.collectAsStateWithLifecycle()
     val hasMore by viewModel.hasMore.collectAsStateWithLifecycle()
@@ -440,6 +441,15 @@ private fun GalleryScreen(
                     Text(shown.size.toString() + " items", style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+            }
+            if (tab == 1 && favoritesError != null) {
+                Text(
+                    favoritesError.orEmpty(),
+                    modifier = Modifier.fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
             if (loading && tab == 0) {
                 LinearProgressIndicator(Modifier.fillMaxWidth().semantics {
