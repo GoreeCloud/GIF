@@ -47,6 +47,7 @@ import androidx.lifecycle.lifecycleScope
 import coil3.compose.AsyncImage
 import com.goreecloud.gifs.data.IncomingMediaPolicy
 import com.goreecloud.gifs.data.MediaAttribution
+import com.goreecloud.gifs.data.MediaRightsGuidance
 import com.goreecloud.gifs.data.MediaItem
 import com.goreecloud.gifs.data.MediaKind
 import com.goreecloud.gifs.data.SavedRemovalPolicy
@@ -788,6 +789,12 @@ private fun MediaDetail(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 3,
             overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            MediaRightsGuidance.forItem(item),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
         )
         TextButton(onClick = onFavorite, enabled = !busy) {
             Icon(if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
