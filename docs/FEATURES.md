@@ -2,7 +2,7 @@
 
 | Feature | Source status | Acceptance remaining |
 | --- | --- | --- |
-| GIF search and pagination | Anonymous Openverse JSON adapter (20/page) with two bounded, cancellable retries for 408/429/selected 5xx responses; API errors remain visible | Real-network, throttling and load-more acceptance |
+| Consent-conscious GIF search and pagination | Anonymous Openverse adapter (20/page) sends no query on launch or while typing; the user presses Search to submit. Includes two cancellable, bounded retries for transient HTTP 408/429/5xx responses and actionable error feedback | Real-network, rate-limit, disclosure, privacy and load-more acceptance |
 | Sticker search with local pagination | Pinned local OpenMoji metadata, multi-term filtering and bounded 60-item pages with Load more and consistent empty-query pagination; no network requests for sticker search | Catalog coverage and large-result-set UI acceptance |
 | GIF preview | Implemented with Coil GIF renderer | Real-device animation and memory testing |
 | Local favorites and saved filters | Android DataStore/private files, independent Saved search/filter/sorting, loss-preventing index decoding and rollback of newly written favorites on failed index updates | Corrupt-index UI, restart/offline/low-storage and physical-device acceptance |
