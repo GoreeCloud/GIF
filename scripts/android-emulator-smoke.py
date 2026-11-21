@@ -193,6 +193,25 @@ def verify_sticker_pagination(serial):
     find_node(serial, "120 items", deadline=65)
 
 
+def verify_removal_requires_confirmation(serial):
+    """Exercise cancellation and explicit deletion only on an isolated emulator."""
+    tap(serial, find_node(serial, "Saved (1)", exact=True, deadline=30))
+    find_node(serial, "Offline favorites", deadline=30)
+    tap(serial, find_node(serial, "Remove favorite", exact=True, deadline=30))
+    find_node(serial, "Remove saved image?", deadline=30)
+    find_node(serial, "Keep saved", deadline=30)
+    tap(serial, find_node(serial, "Keep saved", exact=True, deadline=20))
+    find_node(serial, "Saved (1)", deadline=25)
+    require_file(serial)  # Cancel must preserve the private saved media.
+    tap(serial, find_node(serial, "Remove favorite", exact=True, deadline=30))
+    find_node(serial, "Remove offline copy", deadline=30)
+    tap(serial, find_node(serial, "Remove offline copy", exact=True, deadline=30))
+    find_node(serial, "Saved (0)", deadline=70)
+    files = adb(serial, "shell", "run-as", PACKAGE, "ls", "files/favorites")
+    if ".png" in files or ".gif" in files:
+        raise AssertionError("Favorite file survived confirmed deletion: " + files[:250])
+
+
 def require_mediastore_download(serial):
     """Check the actual Android MediaStore row, not just a transient UI toast."""
     listing = adb(
@@ -223,9 +242,15 @@ def main():
         "--extended", action="store_true",
         help="Also verify offline favorite restart and native sticker paging"
     )
+    parser.add_argument(
+        "--verify-removal", action="store_true",
+        help="With --extended: verify Save removal cancellation and confirmation"
+    )
     args = parser.parse_args()
     if not args.serial.startswith("emulator-"):
         parser.error("Only an emulator serial is allowed")
+    if args.verify_removal and not args.extended:
+        parser.error("--verify-removal requires --extended")
     wait_boot(args.serial)
     print("1/6 Emulator booted", flush=True)
     adb(args.serial, "install", "-r", args.apk, timeout=160)
@@ -262,6 +287,10 @@ def main():
         verify_sticker_pagination(args.serial)
         print("8/8 Native sticker Load more updates item count", flush=True)
         print("EXTENDED_SMOKE_SUCCESS: offline restart and sticker pagination verified", flush=True)
+        if args.verify_removal:
+            verify_removal_requires_confirmation(args.serial)
+            print("9/9 Confirmation protects saved files and explicit deletion succeeds", flush=True)
+            print("REMOVAL_SMOKE_SUCCESS: cancel and confirm behaviors verified", flush=True)
 
 
 if __name__ == "__main__":

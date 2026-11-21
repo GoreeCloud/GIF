@@ -29,7 +29,7 @@
 | [44657499456](https://github.com/GoreeCloud/GIF/actions/runs/44657499456) | Optional extended rerun passed **7/8** and found a visible Load more text node at [411,1801][742,1856], but still showed 60 items | Verified source bug: an empty sticker search is initially unfiltered but active query was normalized to the GIF default `reaction` for page two; fix shared query normalization and rerun |
 | [44658719227](https://github.com/GoreeCloud/GIF/actions/runs/44658719227) | **SUCCESS on corrected feature branch**, commit `4cac95b`: all eight milestones passed, including private sticker persistence after force-stop with Wi-Fi and mobile data disabled and native sticker pagination increasing from 60 to 120 items | Repeat extended regression on protected main after merge; this is not third-party or physical-device acceptance |
 
-These results establish a complete branch-level and protected-main emulator pass at the specified revisions, **not** acceptance on physical devices. The PNG MediaStore row check proves a published entry, not byte-for-byte image identity.
+These results establish a complete branch-level and protected-main emulator pass at the specified revisions, **not** acceptance on physical devices. The PNG MediaStore row check proves a published entry, not byte-for-byte image identity. Optional `verify_removal=true` with `extended=true` additionally tests cancellation of deletion, preserved private files, and explicit offline-file deletion. This ninth milestone remains unverified until a live workflow run passes.
 
 ## Exit criteria
 
