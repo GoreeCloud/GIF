@@ -8,7 +8,7 @@ A native, open-source Android gallery for finding, saving, and sharing GIFs and 
 
 - GIF search using the open [Openverse](https://openverse.org/) API, with mature results filtered, source/license credit shown, and explicit "Load more GIFs" pagination (20 per request for anonymous API access).
 - Sticker search across the bundled, attributed [OpenMoji](https://openmoji.org/) catalog. Search names, tags, and categories without a network connection; image thumbnails and full-resolution artwork are fetched on demand.
-- Native Compose discovery grid and preview sheet with light/dark GoreeCloud UI alpha token roles.
+- Native Compose discovery grid and preview sheet using the pinned GoreeCloud UI Material 3 Expressive theme, four canonical accent palettes (default Iris), dark/light appearance and a rounded floating two-destination navigation capsule.
 - Offline favorites: explicitly favorited GIFs and stickers are copied to app-private storage. Temporary shared-media cache uses a 100 MiB best-effort limit with a grace period for active share targets; offline favorites are never evicted. Saved has its own search (including creator and license) and All / GIFs / Stickers filters plus Newest / Oldest / A–Z sorting, independent from Explore.
 - Local import: from **Saved**, select a GIF or PNG through Android's document picker. The app validates the content and copies it directly to its private favorites; no broad storage permission or GoreeCloud upload is required.
 - Receive from other Android apps: when another app offers a GIF or PNG through **Share**, choose **GoreeCloud GIF's** and confirm **Save offline** to copy the selected image into Saved. Shared files are validated and kept on-device; ordinary JPEGs, links, multiple-image shares and unsupported types are rejected.
@@ -20,7 +20,7 @@ A native, open-source Android gallery for finding, saving, and sharing GIFs and 
 
 ## Install/build from source
 
-Android Studio / Android SDK 37, JDK 21 and Gradle wrapper. Minimum Android 10 (API 29).
+Android Studio / Android SDK 37.1, JDK 21 and Gradle wrapper. Minimum Android 10 (API 29).
 
 ```bash
 ./gradlew :app:testDebugUnitTest :app:assembleDebug :app:lintDebug
@@ -52,6 +52,6 @@ See [Architecture](docs/ARCHITECTURE.md), [Features](docs/FEATURES.md), [Objecti
 
 ## Ecosystem obligations
 
-The Android UI uses verified GC UI alpha semantic colors, not a released native GC UI SDK. GoreeShield privacy and Wardveil cybersecurity are assessed as separate boundaries. GoreeCloud Identity and Mesh connectivity are not installed; anonymous offline functionality deliberately has no central sign-in dependency. No Anchor/Stable/MIPS acceptance is claimed.
+The Android UI now includes an attributed, pinned source snapshot of the GC UI Material 3 Expressive adapter (see gc-ui-compose/UPSTREAM.md); this is not a released native GC UI SDK or proof of physical-device visual acceptance. GoreeShield privacy and Wardveil cybersecurity are assessed as separate boundaries. GoreeCloud Identity and Mesh connectivity are not installed; anonymous offline functionality deliberately has no central sign-in dependency. No Anchor/Stable/MIPS acceptance is claimed.
 
 Copyright 2026 GoreeCloud. Third-party credits and licenses are retained separately.
