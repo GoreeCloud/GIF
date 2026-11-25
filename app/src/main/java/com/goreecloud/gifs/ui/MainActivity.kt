@@ -307,7 +307,14 @@ private fun GalleryScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+            NavigationBar(
+                modifier = Modifier.navigationBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .clip(RoundedCornerShape(26.dp)),
+                containerColor = MaterialTheme.colorScheme.surface,
+                tonalElevation = 3.dp,
+                windowInsets = WindowInsets(0, 0, 0, 0)
+            ) {
                 NavigationBarItem(
                     selected = tab == 0,
                     onClick = { tab = 0 },
