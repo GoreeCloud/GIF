@@ -43,7 +43,7 @@ jobs:
           sha256sum app-debug.apk > SHA256SUMS
           cat SHA256SUMS
       - name: Upload experimental debug APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: goreecloud-gifs-debug-apk
           path: |
