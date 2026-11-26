@@ -85,7 +85,7 @@ jobs:
           python3 scripts/android-emulator-smoke.py --serial emulator-5580 --apk app/build/outputs/apk/debug/app-debug.apk "${EXTRA[@]}"
       - name: Upload isolated emulator diagnostics on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: emulator-qa-diagnostics
           path: |
